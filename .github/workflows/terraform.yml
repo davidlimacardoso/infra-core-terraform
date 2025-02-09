@@ -6,20 +6,22 @@ on:
       environment:
         type: string
         required: true
-      aws-assume-role-arn:
-        type: string
-        required: true
-      aws-region:
-        type: string
-        required: true
-  
+
+permissions:
+  pull-requests: write
+
+env:
+  ENV: ${{ inputs.environment }}
+  AWS_ROLE: arn:aws:iam::{{ secrets.AWS_ACCOUNT }}:role/${{ secrets.AWS_ROLE }}
+  AWS_ACCOUNT: ${{ secrets.AWS_ACCOUNT }}
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+
 jobs:
 
   plan:
   
     runs-on: ubuntu-latest
     permissions:
-      pull-requests: write
       id-token: write
       contents: read
 
@@ -35,8 +37,8 @@ jobs:
       - name: Authenticate in the AWS
         uses: aws-actions/configure-aws-credentials@v4
         with: 
-          role-to-assume: "${{ inputs.aws-assume-role-arn }}"
-          aws-region: "${{ inputs.aws-region }}"
+          role-to-assume: "${{ env.AWS_ROLE }}"
+          aws-region: "${{ env.AWS_REGION }}"
 
       - name: Set working directory dynamically
         id: set-dir
@@ -69,7 +71,7 @@ jobs:
         if: env.CHANGED_DIR != ''
         run: |
           cd infra/aws/$CHANGED_DIR
-          terraform plan -detailed-exitcode -no-color -input=false -var-file=${{ inputs.environment }}.tfvars -out tfplan > plan_output.txt
+          terraform plan -detailed-exitcode -no-color -input=false -var-file=${{ env.ENV }}.tfvars -out tfplan > plan_output.txt
         continue-on-error: true
  
       - name: Hide Previous Comments

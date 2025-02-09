@@ -1,7 +1,7 @@
 name: "Develop Deploy"
 
 on:
-  push:
+  pull_request:
     branches:
       - develop
     paths:
@@ -10,11 +10,10 @@ on:
 permissions:
   id-token: write
   contents: read
+  pull-requests: write
 
 jobs:
   terraform:
     uses: ./.github/workflows/terraform.yml
     with:
       environment: dev
-      aws-assume-role-arn: arn:aws:iam::{{ secrets.AWS_ACCOUNT }}:role/${{ secrets.AWS_ROLE }}
-      aws-region: ${{ secrets.AWS_REGION }}
