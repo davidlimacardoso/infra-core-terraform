@@ -14,7 +14,7 @@ permissions:
 
 env:
   ENV: ${{ inputs.environment }}
-  AWS_ROLE: arn:aws:iam::{{ secrets.AWS_ACCOUNT }}:role/${{ secrets.AWS_ROLE }}
+  AWS_ROLE: arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/${{ secrets.AWS_ROLE }}
   AWS_ACCOUNT: ${{ secrets.AWS_ACCOUNT }}
   AWS_REGION: ${{ secrets.AWS_REGION }}
 
