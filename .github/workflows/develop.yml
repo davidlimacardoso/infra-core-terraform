@@ -11,15 +11,10 @@ permissions:
   id-token: write
   contents: read
 
-env:
-  AWS_ACCOUNT: ${{ secrets.AWS_ACCOUNT }}
-  AWS_REGION: ${{ secrets.AWS_REGION }}
-  AWS_ROLE: ${{ secrets.AWS_ROLE }}
-
 jobs:
   terraform:
-    uses: ./.github/workflows/terraform.yml
+    uses: ./terraform.yml
     with:
       environment: dev
-      aws-assume-role-arn: arn:aws:iam::{{ env.AWS_ACCOUNT }}:role/${{ env.AWS_ROLE }}
-      aws-region: ${{ env.AWS_REGION }}
+      aws-assume-role-arn: ${{ format('arn:aws:iam::{0}:role/{1}', secrets.AWS_ACCOUNT, secrets.AWS_ROLE) }}
+      aws-region: ${{ format('{0}', secrets.AWS_REGION) }}
