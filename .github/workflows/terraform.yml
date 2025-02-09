@@ -37,8 +37,8 @@ jobs:
       - name: Authenticate in the AWS
         uses: aws-actions/configure-aws-credentials@v4
         with: 
-          role-to-assume: "${{ inputs.aws-assume-role-arn }}"
-          aws-region: "${{ inputs.aws-region }}"
+          role-to-assume: "${{ env.AWS_ROLE }}"
+          aws-region: "${{ env.AWS_REGION }}"
 
       - name: Set working directory dynamically
         id: set-dir
