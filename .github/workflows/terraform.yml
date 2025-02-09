@@ -6,13 +6,13 @@ on:
       environment:
         type: string
         required: true
-      aws-assume-role-arn:
-        type: string
-        required: true
-      aws-region:
-        type: string
-        required: true
-  
+
+env:
+  ENV: ${{ inputs.environment }}
+  AWS_ROLE: arn:aws:iam::{{ secrets.AWS_ACCOUNT }}:role/${{ secrets.AWS_ROLE }}
+  AWS_ACCOUNT: ${{ secrets.AWS_ACCOUNT }}
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+
 jobs:
 
   plan:
@@ -69,7 +69,7 @@ jobs:
         if: env.CHANGED_DIR != ''
         run: |
           cd infra/aws/$CHANGED_DIR
-          terraform plan -detailed-exitcode -no-color -input=false -var-file=${{ inputs.environment }}.tfvars -out tfplan > plan_output.txt
+          terraform plan -detailed-exitcode -no-color -input=false -var-file=${{ env.ENV }}.tfvars -out tfplan > plan_output.txt
         continue-on-error: true
  
       - name: Hide Previous Comments
