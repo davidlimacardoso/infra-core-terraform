@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   terraform:
-    uses: ./terraform.yml
+    uses: ./.github/workflows/terraform.yml
     with:
       environment: dev
       aws-assume-role-arn: ${{ format('arn:aws:iam::{0}:role/{1}', secrets.AWS_ACCOUNT, secrets.AWS_ROLE) }}
