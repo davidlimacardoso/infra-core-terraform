@@ -16,5 +16,5 @@ jobs:
     uses: ./.github/workflows/terraform.yml
     with:
       environment: dev
-      aws-assume-role-arn: "arn:aws:iam::{{ secrets.AWS_ACCOUNT }}:role/${{ secrets.AWS_ROLE }}"
-      aws-region: "${{ secrets.AWS_REGION }}"
+      aws-assume-role-arn: arn:aws:iam::{{ secrets.AWS_ACCOUNT }}:role/${{ secrets.AWS_ROLE }}
+      aws-region: ${{ secrets.AWS_REGION }}
