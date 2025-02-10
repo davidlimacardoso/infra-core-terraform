@@ -7,11 +7,6 @@ on:
         type: string
         required: true
 
-permissions:
-  pull-requests: write
-  id-token: write
-  contents: read
-
 env:
   ENV: ${{ inputs.environment }}
   AWS_ROLE: arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/${{ secrets.AWS_ROLE }}
@@ -24,6 +19,11 @@ jobs:
     defaults:
       run:
         shell: bash
+
+    permissions:
+      pull-requests: write
+      id-token: write
+      contents: read
 
     steps:
 
