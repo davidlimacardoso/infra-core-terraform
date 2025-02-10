@@ -57,15 +57,12 @@ jobs:
       #     # Defina a variável de ambiente
       #     echo "MODIFIED_FILE_PATH=$FILE_PATH" >> $GITHUB_ENV
       - name: Get modified files from GitHub API
-        uses: ankitjain28may/list-files-in-pr@v1.0
-        id: list-files
+        uses: ruslandulina/compare-basehead-commits@v1
         with:
-          githubToken: ${{ github.token }}
-          outputFormat: 'space-delimited'
-      - run: |
-          for file in ${{ steps.list-files.outputs.pullRequestFiles }}; do
-            echo "Changed Files - ${file}."
-          done
+          # Format of the steps output context.
+          # Can be 'space-delimited', 'csv', or 'json'.
+          # Default: 'space-delimited'
+          format: 'json'
 
 
       - name: Authenticate in the AWS
