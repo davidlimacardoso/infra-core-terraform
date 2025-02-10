@@ -7,9 +7,7 @@ on:
 jobs:
 
   apply: 
-    if: >
-      ${{ github.event.issue.pull_request }} && 
-      contains(github.event.comment.body, '/apply')
+    if: contains(github.event.comment.body, '/apply')
     runs-on: ubuntu-latest
 
     permissions:
