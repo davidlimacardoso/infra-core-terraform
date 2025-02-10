@@ -93,9 +93,7 @@ jobs:
       - name: Set working directory dynamically
         id: set-dir
         run: |
-          cd ${{ env.MODIFIED_FILE_PATH }}
-          pwd
-          ls -la
+          working-directory: ${{ env.MODIFIED_FILE_PATH }}
 
       - name: Authenticate in the AWS
         uses: aws-actions/configure-aws-credentials@v4
@@ -108,7 +106,10 @@ jobs:
 
       - name: Terraform Init
         id: init
-        run: terraform init
+        run: |        
+          pwd
+          ls -la
+          terraform init
 
       - name: Terraform Fmt
         id: fmt
