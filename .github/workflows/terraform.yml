@@ -193,6 +193,7 @@ jobs:
       contents: write
     
     env: 
+      ENV: ${{ inputs.environment }}
       WORKDIR: ${{ needs.plan.outputs.workdir }}
       
     defaults:
@@ -238,7 +239,7 @@ jobs:
         id: apply
         run: |
           cd ${{ env.WORKDIR }}
-          terraform apply -auto-approve -no-color {{ env.ENV }}.tfplan
+          terraform apply -no-color {{ env.ENV }}.tfplan
         continue-on-error: true
 
       - name: Comment Apply Output
