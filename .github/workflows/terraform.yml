@@ -1,11 +1,11 @@
-name: "Develop Deploy"
+name: "Terraform Workflow"
 
 on:
-  pull_request:
-    branches:
-      - develop
-    paths:
-      - 'infra/**'
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
 
 permissions:
   pull-requests: write
