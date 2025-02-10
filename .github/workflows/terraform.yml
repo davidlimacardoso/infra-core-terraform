@@ -181,25 +181,25 @@ jobs:
               body: output
             })
       
-  apply: 
-    if: >
-      github.event_name == 'issue_comment' &&
-      contains(github.event.comment.body, '/apply')
-    runs-on: ubuntu-latest
+  # apply: 
+  #   if: >
+  #     github.event_name == 'issue_comment' &&
+  #     contains(github.event.comment.body, '/apply')
+  #   runs-on: ubuntu-latest
     
     
-    env: 
-      ENV: ${{ inputs.environment }}
-      WORKDIR: ${{ needs.plan.outputs.workdir }}
+  #   env: 
+  #     ENV: ${{ inputs.environment }}
+  #     WORKDIR: ${{ needs.plan.outputs.workdir }}
       
-    defaults:
-      run:
-        shell: bash
+  #   defaults:
+  #     run:
+  #       shell: bash
 
-    steps:
+  #   steps:
 
-      - name: Debug Github
-        run: echo ${{ toJSON(github) }}
+  #     - name: Debug Github
+  #       run: echo ${{ toJSON(github) }}
 
 
   #     - name: Notify Applying Settings
