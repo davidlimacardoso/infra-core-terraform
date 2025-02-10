@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - develop
+    types: [opened, edited, synchronize, reopened]
     paths:
       - 'infra/**'
   issue_comment: # issue_comment.created
