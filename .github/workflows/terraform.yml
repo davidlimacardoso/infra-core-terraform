@@ -92,8 +92,7 @@ jobs:
 
       - name: Set working directory dynamically
         id: set-dir
-        run: |
-          working-directory: ${{ env.MODIFIED_FILE_PATH }}
+        working-directory: ${{ env.MODIFIED_FILE_PATH }}
 
       - name: Authenticate in the AWS
         uses: aws-actions/configure-aws-credentials@v4
