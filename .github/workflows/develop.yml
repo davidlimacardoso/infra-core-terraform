@@ -14,19 +14,12 @@ permissions:
 
 jobs:
 
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v3
-
-      - name: Print secrets
-        run: echo ${{ secrets.AWS_ACCOUNT }}
-
   terraform:
     uses: ./.github/workflows/terraform.yml
     with:
       environment: dev
-      aws-assume-role-arn: "arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/${{ secrets.AWS_ROLE }}"
-      aws-region: "${{ secrets.AWS_REGION }}"
+
     secrets: inherit
+      # aws-assume-role-arn: "arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/${{ secrets.AWS_ROLE }}"
+      # aws-region: "${{ secrets.AWS_REGION }}"
+    
