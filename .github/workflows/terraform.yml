@@ -34,36 +34,66 @@ jobs:
         run: echo ${{ toJson(github) }}
         continue-on-error: true
 
-      # - name: Print Diff
-      #   run: |
-      #     git diff --name-only 300e242b0aa91835aecd110a601cfcf8ebaace8f b3a9e095ffbfbf7748dfd2b3106da96c79581bea > changed_files.txt
-      #     cat changed_files.txt
-      #   continue-on-error: true
-
-      # - name: Get modified files from GitHub API
-      #   id: get_modified_files
-      #   run: |
-      #     BASE_COMMIT="${{ github.event.before }}"
-      #     HEAD_COMMIT="${{ github.sha }}"
-
-      #     # Call the GitHub API to list files commited
-      #     RESPONSE=$(curl -s "https://api.github.com/repos/davidlimacardoso/infra-core-terraform/compare/${BASE_COMMIT}...${HEAD_COMMIT}")
-          
-      #     echo "RESPONSE=$RESPONSE" 
-
-      #     # Extract the dir of file commited
-      #     FILE_PATH=$(echo "$RESPONSE" | jq -r '.files[] | select(.filename | startswith("infra/aws/artemis/")) | .filename')
-
-      #     # Defina a variável de ambiente
-      #     echo "MODIFIED_FILE_PATH=$FILE_PATH" >> $GITHUB_ENV
       - name: Get modified files from GitHub API
-        uses: ruslandulina/compare-basehead-commits@v1
-        with:
-          # Format of the steps output context.
-          # Can be 'space-delimited', 'csv', or 'json'.
-          # Default: 'space-delimited'
-          format: 'json'
+        id: get_modified_files
+        run: |
+          BASE_REF="${{ github.base_ref }}"
+          HEAD_REF="${{ github.head_ref }}"
 
+          # URL da API do GitHub
+          API_URL="https://api.github.com/repos/davidlimacardoso/infra-core-terraform/compare/${BASE_REF}...test/workflow"
+
+          # Obter a lista de arquivos modificados
+          response=$(curl -s $API_URL)
+
+          # Filtrar arquivos que começam com 'infra/'
+          files=$(echo "$response" | jq -r '.files[] | select(.filename | startswith("infra/")) | .filename')
+
+          # Arrays para armazenar os Cloud Providers e contas modificadas
+          cloud_providers=()
+          accounts=()
+
+          # Analisar os arquivos modificados
+          for file in $files; do
+            # Extrair o Cloud Provider e a conta do caminho do arquivo
+            cloud_provider=$(echo $file | cut -d'/' -f2)
+            account=$(echo $file | cut -d'/' -f3)
+
+            # Adicionar o Cloud Provider e a conta aos arrays
+            if [[ ! " ${cloud_providers[@]} " =~ " ${cloud_provider} " ]]; then
+              cloud_providers+=("$cloud_provider")
+            fi
+            if [[ ! " ${accounts[@]} " =~ " ${account} " ]]; then
+              accounts+=("$account")
+            fi
+          done
+
+          # Verificar se há mais de um Cloud Provider modificado
+          if [ ${#cloud_providers[@]} -gt 1 ]; then
+            echo "Favor modificar somente um Cloud Provider por vez."
+            exit 1
+          fi
+
+          # Verificar se há mais de uma conta modificada dentro do Cloud Provider
+          if [ ${#accounts[@]} -gt 1 ]; then
+            echo "Favor modificar somente uma conta por vez."
+            exit 1
+          fi
+
+          # Retornar o caminho da conta modificada
+          if [ ${#accounts[@]} -eq 1 ]; then
+            echo "Conta modificada: infra/${cloud_providers[0]}/${accounts[0]}"
+            FILE_PATH="infra/${cloud_providers[0]}/${accounts[0]}"
+            echo "MODIFIED_FILE_PATH=$FILE_PATH" >> $GITHUB_ENV
+          else
+            echo "Nenhuma modificação detectada em infra/aws, infra/gcp ou infra/oci."
+            exit 1
+          fi
+
+      - name: Set working directory dynamically
+        id: set-dir
+        run: |
+          cd ${{ env.MODIFIED_FILE_PATH }}
 
       - name: Authenticate in the AWS
         uses: aws-actions/configure-aws-credentials@v4
@@ -71,16 +101,6 @@ jobs:
           role-to-assume: "${{ env.AWS_ROLE }}"
           aws-region: "${{ env.AWS_REGION }}"
 
-      - name: Set working directory dynamically
-        id: set-dir
-        run: |
-          CHANGED_DIR=$(git diff --name-only HEAD^ HEAD | grep '^infra/\(aws\|gcp\|oci\)/' | cut -d'/' -f2,3 | uniq || true)
-          if [ -z "$CHANGED_DIR" ]; then
-            echo "No changes detected in infra/aws/gcp/oci directories."
-          else
-            echo "CHANGED_DIR=$CHANGED_DIR" >> $GITHUB_ENV
-          fi
-      
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
 
@@ -103,9 +123,6 @@ jobs:
 
       - name: Terraform Plan
         id: plan
-        if: env.CHANGED_DIR != ''
-        run: |
-          cd infra/aws/$CHANGED_DIR
           terraform plan -detailed-exitcode -no-color -input=false -var-file=${{ env.ENV }}.tfvars -out tfplan > plan_output.txt
         continue-on-error: true
  
