@@ -40,22 +40,31 @@ jobs:
       #     cat changed_files.txt
       #   continue-on-error: true
 
-      - name: Get modified files from GitHub API
-        id: get_modified_files
-        run: |
-          BASE_COMMIT="${{ github.event.before }}"
-          HEAD_COMMIT="${{ github.sha }}"
+      # - name: Get modified files from GitHub API
+      #   id: get_modified_files
+      #   run: |
+      #     BASE_COMMIT="${{ github.event.before }}"
+      #     HEAD_COMMIT="${{ github.sha }}"
 
-          # Call the GitHub API to list files commited
-          RESPONSE=$(curl -s "https://api.github.com/repos/davidlimacardoso/infra-core-terraform/compare/${BASE_COMMIT}...${HEAD_COMMIT}")
+      #     # Call the GitHub API to list files commited
+      #     RESPONSE=$(curl -s "https://api.github.com/repos/davidlimacardoso/infra-core-terraform/compare/${BASE_COMMIT}...${HEAD_COMMIT}")
           
-          echo "RESPONSE=$RESPONSE" 
+      #     echo "RESPONSE=$RESPONSE" 
 
-          # Extract the dir of file commited
-          FILE_PATH=$(echo "$RESPONSE" | jq -r '.files[] | select(.filename | startswith("infra/aws/artemis/")) | .filename')
+      #     # Extract the dir of file commited
+      #     FILE_PATH=$(echo "$RESPONSE" | jq -r '.files[] | select(.filename | startswith("infra/aws/artemis/")) | .filename')
 
-          # Defina a variável de ambiente
-          echo "MODIFIED_FILE_PATH=$FILE_PATH" >> $GITHUB_ENV
+      #     # Defina a variável de ambiente
+      #     echo "MODIFIED_FILE_PATH=$FILE_PATH" >> $GITHUB_ENV
+
+      - name: verify-version
+        uses: actions-cool/verify-files-modify@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          allowed-paths: 'infra/'
+          comment: |
+            Please don't modify this.
+          close: true
 
       - name: Authenticate in the AWS
         uses: aws-actions/configure-aws-credentials@v4
