@@ -187,8 +187,6 @@ jobs:
       github.event.comment.body == '/apply'
     needs: plan
     runs-on: ubuntu-latest
-    permissions:
-      issues: write
     
     env: 
       ENV: ${{ inputs.environment }}
