@@ -34,6 +34,12 @@ jobs:
         run: echo ${{ toJson(github) }}
         continue-on-error: true
 
+      - name: Print Diff
+        run: |
+          git diff --name-only 300e242b0aa91835aecd110a601cfcf8ebaace8f b3a9e095ffbfbf7748dfd2b3106da96c79581bea > changed_files.txt
+          cat changed_files.txt
+        continue-on-error: true
+
       - name: Authenticate in the AWS
         uses: aws-actions/configure-aws-credentials@v4
         with: 
