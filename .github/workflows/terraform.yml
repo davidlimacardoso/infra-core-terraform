@@ -41,9 +41,10 @@ jobs:
         run: |
           BASE_REF="${{ github.base_ref }}"
           HEAD_REF="${{ github.head_ref }}"
+          REPOSITORY="${{ github.repository }}"
 
           # URL da API do GitHub
-          API_URL="https://api.github.com/repos/davidlimacardoso/infra-core-terraform/compare/${BASE_REF}...test/workflow"
+          API_URL="https://api.github.com/repos/${REPOSITORY}/compare/${BASE_REF}...${HEAD_REF}"
 
           # Obter a lista de arquivos modificados
           response=$(curl -s $API_URL)
@@ -184,6 +185,7 @@ jobs:
       contains(github.event.comment.body, '/apply')
     needs: plan
     runs-on: ubuntu-latest
+    
     
     env: 
       ENV: ${{ inputs.environment }}
