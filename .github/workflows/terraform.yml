@@ -96,37 +96,33 @@ jobs:
           role-to-assume: "${{ env.AWS_ROLE }}"
           aws-region: "${{ env.AWS_REGION }}"
 
-      - name: Set working directory dynamically
-        id: set-dir
-        run: | 
-          cd ${{ env.MODIFIED_FILE_PATH }}
-
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
 
       - name: Terraform Init
         id: init
-        run: |        
-          pwd
-          ls -la
-          terraform init
+        run: terraform init
+        working-directory: ${{ env.MODIFIED_FILE_PATH }}
 
       - name: Terraform Fmt
         id: fmt
         run: terraform fmt -check
+        working-directory: ${{ env.MODIFIED_FILE_PATH }}
    
       - name: Terraform Validate
         id: validate
         run: terraform validate -no-color
+        working-directory: ${{ env.MODIFIED_FILE_PATH }}
 
       - name: Terraform Workspace
         id: workspace
-        run: |
-          terraform workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
+        run: terraform workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
+        working-directory: ${{ env.MODIFIED_FILE_PATH }}
 
       - name: Terraform Plan
         id: plan
         run: terraform plan -detailed-exitcode -no-color -input=false -var-file=envs/${{ env.ENV }}.tfvars -out tfplan > plan_output.txt
+        working-directory: ${{ env.MODIFIED_FILE_PATH }}
         continue-on-error: true
  
       - name: Hide Previous Comments
@@ -182,3 +178,4 @@ jobs:
               repo: context.repo.repo,
               body: output
             })
+        working-directory: ${{ env.MODIFIED_FILE_PATH }}
