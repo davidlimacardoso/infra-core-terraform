@@ -1,13 +1,11 @@
-name: "Terraform Workflow"
+name: "Develop Deploy"
 
 on:
-  workflow_call:
-    inputs:
-      environment:
-        type: string
-        required: true
-  issue_comment:
-    types: [created]
+  pull_request:
+    branches:
+      - develop
+    paths:
+      - 'infra/**'
 
 permissions:
   pull-requests: write
@@ -181,95 +179,95 @@ jobs:
               body: output
             })
       
-  apply: 
-    if: >
-      github.event_name == 'issue_comment' &&
-      github.event.issue.pull_request &&
-      contains(github.event.comment.body, '/apply')
-    runs-on: ubuntu-latest
+  # apply: 
+  #   if: >
+  #     github.event_name == 'issue_comment' &&
+  #     github.event.issue.pull_request &&
+  #     contains(github.event.comment.body, '/apply')
+  #   runs-on: ubuntu-latest
     
     
-    env: 
-      ENV: ${{ inputs.environment }}
-      WORKDIR: ${{ needs.plan.outputs.workdir }}
+  #   env: 
+  #     ENV: ${{ inputs.environment }}
+  #     WORKDIR: ${{ needs.plan.outputs.workdir }}
       
-    defaults:
-      run:
-        shell: bash
+  #   defaults:
+  #     run:
+  #       shell: bash
 
-    steps:
+  #   steps:
 
-      # - name: Debug Github
-      #   run: echo ${{ toJSON(github) }}
+  #     # - name: Debug Github
+  #     #   run: echo ${{ toJSON(github) }}
 
 
-      - name: Notify Applying Settings
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const output = "\>\:rocket\: Applying the settings...";
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: output
-            });
+  #     - name: Notify Applying Settings
+  #       uses: actions/github-script@v6
+  #       with:
+  #         github-token: ${{ secrets.GITHUB_TOKEN }}
+  #         script: |
+  #           const output = "\>\:rocket\: Applying the settings...";
+  #           github.rest.issues.createComment({
+  #             issue_number: context.issue.number,
+  #             owner: context.repo.owner,
+  #             repo: context.repo.repo,
+  #             body: output
+  #           });
               
-      - name: Checkout code
-        uses: actions/checkout@v3
+  #     - name: Checkout code
+  #       uses: actions/checkout@v3
 
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
+  #     - name: Set up Terraform
+  #       uses: hashicorp/setup-terraform@v3
 
-      - name: Terraform Init
-        id: init
-        run: terraform -chdir=${{ env.WORKDIR }} init
+  #     - name: Terraform Init
+  #       id: init
+  #       run: terraform -chdir=${{ env.WORKDIR }} init
         
-      - name: Terraform Workspace
-        id: workspace
-        run: |
-          terraform -chdir=${{ env.WORKDIR }} workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
+  #     - name: Terraform Workspace
+  #       id: workspace
+  #       run: |
+  #         terraform -chdir=${{ env.WORKDIR }} workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
 
-      - name: Terraform Apply
-        id: apply
-        run: terraform -chdir=${{ env.WORKDIR }} apply -no-color {{ env.ENV }}.tfplan
-        continue-on-error: true
+  #     - name: Terraform Apply
+  #       id: apply
+  #       run: terraform -chdir=${{ env.WORKDIR }} apply -no-color {{ env.ENV }}.tfplan
+  #       continue-on-error: true
 
-      - name: Comment Apply Output
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const command = context.payload.comment.body;
-            const outcome = "${{ steps.apply.outcome }}";
-            const emoji = outcome === 'failure' ? ':x:' : ':white_check_mark:';
-            const output = `#### Terraform Apply Output \`${outcome}\` ${emoji}
-            \`\`\`\n
-            ${{ steps.apply.outputs.stdout }} 
-            ${{ steps.apply.outputs.stderr }}
-            \`\`\`
-            *Executed by: @${{ github.actor }}, Terraform command: \`${command}\`*`;
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: output
-            })
-      # - name: Merge Pull Request
-      #   if: steps.apply.outcome == 'success'
-      #   uses: actions/github-script@v6
-      #   with:
-      #     github-token: ${{ secrets.GITHUB_TOKEN }}
-      #     script: |
-      #       await github.rest.pulls.merge({
-      #         owner: context.repo.owner,
-      #         repo: context.repo.repo,
-      #         pull_number: context.issue.number,
-      #         merge_method: 'merge'
-      #       });
-      - name: Hide Previous Comments
-        if: steps.apply.outcome != 'success'
-        uses: kanga333/comment-hider@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: Comment Apply Output
+  #       uses: actions/github-script@v6
+  #       with:
+  #         github-token: ${{ secrets.GITHUB_TOKEN }}
+  #         script: |
+  #           const command = context.payload.comment.body;
+  #           const outcome = "${{ steps.apply.outcome }}";
+  #           const emoji = outcome === 'failure' ? ':x:' : ':white_check_mark:';
+  #           const output = `#### Terraform Apply Output \`${outcome}\` ${emoji}
+  #           \`\`\`\n
+  #           ${{ steps.apply.outputs.stdout }} 
+  #           ${{ steps.apply.outputs.stderr }}
+  #           \`\`\`
+  #           *Executed by: @${{ github.actor }}, Terraform command: \`${command}\`*`;
+  #           github.rest.issues.createComment({
+  #             issue_number: context.issue.number,
+  #             owner: context.repo.owner,
+  #             repo: context.repo.repo,
+  #             body: output
+  #           })
+  #     # - name: Merge Pull Request
+  #     #   if: steps.apply.outcome == 'success'
+  #     #   uses: actions/github-script@v6
+  #     #   with:
+  #     #     github-token: ${{ secrets.GITHUB_TOKEN }}
+  #     #     script: |
+  #     #       await github.rest.pulls.merge({
+  #     #         owner: context.repo.owner,
+  #     #         repo: context.repo.repo,
+  #     #         pull_number: context.issue.number,
+  #     #         merge_method: 'merge'
+  #     #       });
+  #     - name: Hide Previous Comments
+  #       if: steps.apply.outcome != 'success'
+  #       uses: kanga333/comment-hider@master
+  #       with:
+  #         github_token: ${{ secrets.GITHUB_TOKEN }}
