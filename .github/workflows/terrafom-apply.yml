@@ -13,7 +13,7 @@ jobs:
 
   apply: 
     if: >
-      github.event.comment.body == '/apply'
+      contains(github.event.comment.body, '/apply')
     runs-on: ubuntu-latest
 
     permissions:
