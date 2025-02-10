@@ -134,7 +134,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            let planOutput = fs.readFileSync('${{ env.WORKDIR }}/${{ env.ENV }}.plan_output.txt', 'utf8');
+            let planOutput = fs.readFileSync('${{ env.WORKDIR }}/${{ env.ENV }}_plan_output.txt', 'utf8');
 
             const lines = planOutput.split('\n');
             const modifiedLines = lines.map(line => {
