@@ -119,7 +119,7 @@ jobs:
 
       - name: Terraform Plan
         id: plan
-        run: terraform -chdir=${{ env.WORKDIR }} plan -detailed-exitcode -no-color -input=false -var-file=envs/${{ env.ENV }}.tfvars -out {{ env.ENV }}.tfplan > plan_output.txt
+        run: terraform -chdir=${{ env.WORKDIR }} plan -detailed-exitcode -no-color -input=false -var-file=envs/${{ env.ENV }}.tfvars -out ${{ env.ENV }}.tfplan > {{ env.ENV }}_plan_output.txt
         continue-on-error: true
  
       - name: Hide Previous Comments
@@ -134,7 +134,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            let planOutput = fs.readFileSync('${{ env.WORKDIR }}/plan_output.txt', 'utf8');
+            let planOutput = fs.readFileSync('${{ env.WORKDIR }}/${{ env.ENV }}.plan_output.txt', 'utf8');
 
             const lines = planOutput.split('\n');
             const modifiedLines = lines.map(line => {
@@ -193,8 +193,9 @@ jobs:
 
     steps:
 
-      - name: Debug Github
-        run: echo ${{ toJSON(github) }}
+      # - name: Debug Github
+      #   run: echo ${{ toJSON(github) }}
+
 
       - name: Notify Applying Settings
         uses: actions/github-script@v6
