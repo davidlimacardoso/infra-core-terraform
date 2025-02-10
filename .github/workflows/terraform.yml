@@ -90,15 +90,16 @@ jobs:
             exit 1
           fi
 
-      - name: Set working directory dynamically
-        id: set-dir
-        working-directory: ${{ env.MODIFIED_FILE_PATH }}
-
       - name: Authenticate in the AWS
         uses: aws-actions/configure-aws-credentials@v4
         with: 
           role-to-assume: "${{ env.AWS_ROLE }}"
           aws-region: "${{ env.AWS_REGION }}"
+
+      - name: Set working directory dynamically
+        id: set-dir
+        run: | 
+          cd ${{ env.MODIFIED_FILE_PATH }}
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
