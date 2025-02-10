@@ -18,11 +18,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Print secrets
-        run: echo "AWS_ACCOUNT: ${{ secrets.AWS_ACCOUNT }}"
-        
+        run: echo ${{ secrets.AWS_ACCOUNT }}
+
   terraform:
     uses: ./.github/workflows/terraform.yml
     with:
