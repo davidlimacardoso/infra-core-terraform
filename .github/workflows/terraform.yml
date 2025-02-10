@@ -9,8 +9,8 @@ on:
 
 env:
   ENV: ${{ inputs.environment }}
-  AWS_ROLE: arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/${{ secrets.AWS_ROLE }}
-  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_ROLE: "arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/${{ secrets.AWS_ROLE }}"
+  AWS_REGION: "${{ secrets.AWS_REGION }}"
 
 jobs:
 
