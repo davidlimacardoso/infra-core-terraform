@@ -133,12 +133,11 @@ jobs:
       - name: Comment Plan Output
         uses: actions/github-script@v6
         # if: always() && github.event_name == 'pull_request'
-        working-directory: ${{ env.MODIFIED_FILE_PATH }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            let planOutput = fs.readFileSync('./terraform/plan_output.txt', 'utf8');
+            let planOutput = fs.readFileSync('${{ env.MODIFIED_FILE_PATH }}/plan_output.txt', 'utf8');
 
             const lines = planOutput.split('\n');
             const modifiedLines = lines.map(line => {
