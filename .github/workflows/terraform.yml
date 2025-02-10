@@ -30,6 +30,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Print Github events
+        run: echo ${{ toJson(github) }}
+        continue-on-error: true
+
       - name: Authenticate in the AWS
         uses: aws-actions/configure-aws-credentials@v4
         with: 
@@ -39,7 +43,7 @@ jobs:
       - name: Set working directory dynamically
         id: set-dir
         run: |
-          CHANGED_DIR=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^infra/\(aws\|gcp\|oci\)/' | cut -d'/' -f2,3 | uniq || true)
+          CHANGED_DIR=$(git diff --name-only HEAD^ HEAD | grep '^infra/\(aws\|gcp\|oci\)/' | cut -d'/' -f2,3 | uniq || true)
           if [ -z "$CHANGED_DIR" ]; then
             echo "No changes detected in infra/aws/gcp/oci directories."
           else
