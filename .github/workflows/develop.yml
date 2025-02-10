@@ -23,6 +23,3 @@ jobs:
       environment: dev
 
     secrets: inherit
-      # aws-assume-role-arn: "arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/${{ secrets.AWS_ROLE }}"
-      # aws-region: "${{ secrets.AWS_REGION }}"
-    
