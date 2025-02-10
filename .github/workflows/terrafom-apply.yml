@@ -1,0 +1,23 @@
+name: 'Terraform Apply'
+
+on:
+
+  issue_comment: # issue_comment.created
+    types: [created]
+
+jobs:
+
+  apply: 
+    if: >
+      github.event_name == 'issue_comment' &&
+      contains(github.event.comment.body, '/apply')
+    runs-on: ubuntu-latest
+      
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+
+      - name: Debug Github
+        run: echo ${{ toJSON(github) }}
