@@ -11,7 +11,6 @@ permissions:
   pull-requests: write
   id-token: write
   contents: read
-  issues: write  
 
 env:
   ENV: ${{ inputs.environment }}
@@ -188,6 +187,8 @@ jobs:
       github.event.comment.body == '/apply'
     needs: plan
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
     
     env: 
       ENV: ${{ inputs.environment }}
