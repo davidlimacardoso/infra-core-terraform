@@ -13,7 +13,9 @@ jobs:
 
   apply: 
     if: >
-      contains(github.event.comment.body, '/apply')
+      github.event_name == 'issue_comment' && 
+      contains(github.event.comment.body, '/apply') &&
+      github.event.issue.pull_request
     runs-on: ubuntu-latest
 
     permissions:
