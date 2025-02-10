@@ -56,15 +56,17 @@ jobs:
 
       #     # Defina a variável de ambiente
       #     echo "MODIFIED_FILE_PATH=$FILE_PATH" >> $GITHUB_ENV
-
-      - name: verify-version
-        uses: actions-cool/verify-files-modify@v1
+      - name: Get modified files from GitHub API
+        uses: ankitjain28may/list-files-in-pr@v1.0
+        id: list-files
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          allowed-paths: 'infra/'
-          comment: |
-            Please don't modify this.
-          close: true
+          githubToken: ${{ github.token }}
+          outputFormat: 'space-delimited'
+      - run: |
+          for file in ${{ steps.list-files.outputs.pullRequestFiles }}; do
+            echo "Changed Files - ${file}."
+          done
+
 
       - name: Authenticate in the AWS
         uses: aws-actions/configure-aws-credentials@v4
