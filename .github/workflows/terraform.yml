@@ -133,6 +133,7 @@ jobs:
       - name: Comment Plan Output
         uses: actions/github-script@v6
         # if: always() && github.event_name == 'pull_request'
+        working-directory: ${{ env.MODIFIED_FILE_PATH }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -178,4 +179,4 @@ jobs:
               repo: context.repo.repo,
               body: output
             })
-        working-directory: ${{ env.MODIFIED_FILE_PATH }}
+      
