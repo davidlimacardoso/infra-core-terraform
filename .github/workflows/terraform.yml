@@ -6,11 +6,22 @@ on:
       environment:
         type: string
         required: true
+      aws-assume-role-arn:
+        type: string
+        required: true
+      aws-region:
+        type: string
+        required: true
+
+permissions:
+  pull-requests: write
+  id-token: write
+  contents: read
 
 env:
   ENV: ${{ inputs.environment }}
-  AWS_ROLE: "arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/${{ secrets.AWS_ROLE }}"
-  AWS_REGION: "${{ secrets.AWS_REGION }}"
+  AWS_ROLE: ${{ inputs.aws-assume-role-arn }} 
+  AWS_REGION: ${{ inputs.aws-region }}
 
 jobs:
 
@@ -19,11 +30,6 @@ jobs:
     defaults:
       run:
         shell: bash
-
-    permissions:
-      pull-requests: write
-      id-token: write
-      contents: read
 
     steps:
 
