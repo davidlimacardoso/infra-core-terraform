@@ -6,6 +6,8 @@ on:
       environment:
         type: string
         required: true
+  issue_comment:
+    types: [created]
 
 permissions:
   pull-requests: write
