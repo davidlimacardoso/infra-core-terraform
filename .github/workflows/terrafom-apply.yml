@@ -4,25 +4,23 @@ on:
   pull_request:
     branches:
       - develop
-    types: [opened, edited, synchronize, reopened]
-    paths:
-      - 'infra/**'
-  issue_comment: # issue_comment.created
+    types: [opened, synchronize, reopened, labeled, unlabeled, ready_for_review, locked, unlocked, edited, closed, reopened ]
+  issue_comment:
     types: [created]
 
 jobs:
 
   apply: 
-    if: >
-      github.event_name == 'issue_comment' && 
-      contains(github.event.comment.body, '/apply') &&
-      github.event.issue.pull_request
+    if: |
+      github.event.issue.pull_request && 
+      contains(github.event.comment.body, '/apply')
+
     runs-on: ubuntu-latest
 
     permissions:
       pull-requests: write
-      issues: write  
-      contents: write
+      contents: read
+      issues: write    # Required for commenting
       
     defaults:
       run:
