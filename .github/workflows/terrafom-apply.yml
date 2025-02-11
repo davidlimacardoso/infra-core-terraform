@@ -7,7 +7,10 @@ on:
 jobs:
 
   apply: 
-    if: contains(github.event.comment.body, 'apply')
+    if: >
+      github.event_name == 'issue_comment' &&
+      github.event.comment.body == '/apply'
+
     runs-on: ubuntu-latest
 
     permissions:
