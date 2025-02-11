@@ -23,6 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       workdir: ${{ env.WORKDIR }}
+      fmt: ${{ steps.terraform-format.outcome }}
     defaults:
       run:
         shell: bash
@@ -98,15 +99,15 @@ jobs:
         uses: hashicorp/setup-terraform@v3
 
       - name: Terraform Init
-        id: init
+        id: terraform-init
         run: terraform -chdir=${{ env.WORKDIR }} init
 
       - name: Terraform Fmt
-        id: fmt
+        id: terraform-format
         run: terraform -chdir=${{ env.WORKDIR }} fmt -check
    
       - name: Terraform Validate
-        id: validate
+        id: terraform-validate
         run: terraform -chdir=${{ env.WORKDIR }} validate -no-color
 
   plan:
@@ -114,6 +115,7 @@ jobs:
     runs-on: ubuntu-latest
     env:  
       WORKDIR: ${{ needs.validate.outputs.workdir }}
+      FMT: ${{ needs.validate.outputs.fmt }}
     defaults:
       run:
         shell: bash
@@ -175,9 +177,10 @@ jobs:
 
             // Merge modified lines into a single string
             planOutput = modifiedLines.join('\n');
-            const planEmoji = planOutcome === 'success' ? '✅' : '❌';
-            const output = `#### Terraform Format and Style 🖌\`${{ steps.terraform-plan.outcome }} ${planEmoji}\`
-            #### Terraform Workspace 🤖\`${{ steps.workspace.outcome }}\`
+            const planEmoji = ${{ steps.plan.outcome }} === 'success' ? '✅' : '❌';
+            const fmtEmoji = ${{ env.FMT }} === 'success' ? '✅' : '❌';
+            const output = `#### Terraform Format and Style 🖌\`${{ env.FMT }} ${fmtEmoji}\`
+            #### Terraform Workspace 🤖\`${{ steps.terraform-workspace.outcome }} ${planEmoji}\`
             #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
             <details><summary>Show Plan</summary>
   
