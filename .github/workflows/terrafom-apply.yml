@@ -1,8 +1,18 @@
 name: 'Terraform Apply'
 
 on:
-  issue_comment: 
+  pull_request:
+    branches:
+      - main
+      - stage
+      - develop
+  issue_comment:
     types: [created]
+
+permissions:
+  pull-requests: write
+  issues: write  
+  contents: write
 
 jobs:
 
