@@ -4,7 +4,7 @@ on:
   pull_request:
     branches:
       - develop
-    types: [opened, synchronize]
+    types: [opened, synchronize, reopened, labeled, unlabeled, ready_for_review, locked, unlocked, edited, closed, reopened ]
   issue_comment:
     types: [created]
   pull_request_review_comment:
