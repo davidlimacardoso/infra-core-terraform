@@ -169,8 +169,8 @@ jobs:
 
             // Merge modified lines into a single string
             planOutput = modifiedLines.join('\n');
-
-            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+            const planEmoji = planOutcome === 'success' ? '✅' : '❌';
+            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }} ${planEmoji}\`
             #### Terraform Workspace 🤖\`${{ steps.workspace.outcome }}\`
             #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
             <details><summary>Show Plan</summary>
@@ -180,9 +180,6 @@ jobs:
             \`\`\`
   
             </details>
-            
-            \:rocket\: To apply this plan, run this command\: \`\/apply\`
-
             \n
   
             *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
@@ -193,8 +190,12 @@ jobs:
               body: output
             })
       
+      - name: Terraform plan status
+        if: steps.plan.outcome == 'failure'
+        run: exit 1
+
   apply: 
-    if: plan.terraform-plan.outcome == 'success'
+    
     runs-on: ubuntu-latest
     needs: [ plan ]
     env: 
