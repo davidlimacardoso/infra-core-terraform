@@ -187,9 +187,9 @@ jobs:
             const workspaceEmoji = workspaceOutcome == 'success' ? '✅' : '❌';
 
             const output = `#### Terraform Format and Style 🖌\`${{ env.FMT }} ${fmtEmoji}\`
-            #### Terraform Workspace \`${{ env.ENV }}\` 🤖 \`${{ steps.terraform-workspace.outcome }} workspaceEmoji\`
-            #### Terraform Plan 📖\`${{ steps.terraform-plan.outcome }} ${planEmoji}\`
-            <details><summary>Show Plan🔎 </summary>
+            #### Terraform Workspace \`${{ env.ENV }}\` 🤖 \`${{ steps.terraform-workspace.outcome }} ${workspaceEmoji}\`
+            #### Terraform Plan 📖 \`${{ steps.terraform-plan.outcome }} ${planEmoji}\`
+            <details><summary>Show Plan 🔎 </summary>
   
             \`\`\`diff
             ${planOutput}
