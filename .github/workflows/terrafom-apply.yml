@@ -1,10 +1,6 @@
 name: 'Terraform Apply'
 
 on:
-  pull_request:
-    branches:
-      - develop
-    types: [opened, synchronize, reopened, labeled, unlabeled, ready_for_review, locked, unlocked, edited, closed, reopened ]
   issue_comment:
     types: [created]
 
