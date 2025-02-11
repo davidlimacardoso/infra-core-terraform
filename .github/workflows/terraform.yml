@@ -177,8 +177,8 @@ jobs:
 
             // Merge modified lines into a single string
             planOutput = modifiedLines.join('\n');
-            const planEmoji = ${{ steps.plan.outcome }} === 'success' ? '✅' : '❌';
-            const fmtEmoji = ${{ env.FMT }} === 'success' ? '✅' : '❌';
+            const planEmoji = ${{ steps.plan.outcome }} == 'success' ? '✅' : '❌';
+            const fmtEmoji = ${{ env.FMT }} == 'success' ? '✅' : '❌';
             const output = `#### Terraform Format and Style 🖌\`${{ env.FMT }} ${fmtEmoji}\`
             #### Terraform Workspace 🤖\`${{ steps.terraform-workspace.outcome }} ${planEmoji}\`
             #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
