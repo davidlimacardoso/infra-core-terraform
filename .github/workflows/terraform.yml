@@ -21,11 +21,11 @@ jobs:
 
   validate:
     runs-on: ubuntu-latest
+    outputs:
+      workdir: ${{ env.WORKDIR }}
     defaults:
       run:
         shell: bash
-    outputs:
-      workdir: ${{ steps.get-dir.outputs.WORKDIR }}
 
     steps:
       - name: Checkout code
@@ -114,7 +114,6 @@ jobs:
     runs-on: ubuntu-latest
     env:  
       WORKDIR: ${{ needs.validate.outputs.workdir }}
-
     defaults:
       run:
         shell: bash
