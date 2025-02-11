@@ -6,14 +6,11 @@ on:
       environment:
         type: string
         required: true
-  issue_comment:
-    types: [created]
 
 permissions:
   pull-requests: write
   id-token: write
   contents: read
-  issues: write
 
 env:
   ENV: ${{ inputs.environment }}
@@ -22,7 +19,7 @@ env:
 
 jobs:
 
-  plan:
+  validate:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -31,41 +28,36 @@ jobs:
       workdir: ${{ steps.get-dir.outputs.WORKDIR }}
 
     steps:
-
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # - name: Print Github events
-      #   run: echo ${{ toJson(github) }}
-      #   continue-on-error: true
-
-      - name: Get modified files from GitHub API
+      - name: Get modified files from GitHub API and generate work directory
         id: get-dir
         run: |
           BASE_REF="${{ github.base_ref }}"
           HEAD_REF="${{ github.head_ref }}"
           REPOSITORY="${{ github.repository }}"
 
-          # URL da API do GitHub
+          # GitHub API URL load diff between base and head commit
           API_URL="https://api.github.com/repos/${REPOSITORY}/compare/${BASE_REF}...${HEAD_REF}"
 
-          # Obter a lista de arquivos modificados
+          # Load modified files
           response=$(curl -s $API_URL)
 
-          # Filtrar arquivos que começam com 'infra/'
+          # Filter files that start with 'infra/'
           files=$(echo "$response" | jq -r '.files[] | select(.filename | startswith("infra/")) | .filename')
 
-          # Arrays para armazenar os Cloud Providers e contas modificadas
+          # Arrays to save Cloud Providers and modified accounts
           cloud_providers=()
           accounts=()
 
-          # Analisar os arquivos modificados
+          # Analizys modified files
           for file in $files; do
-            # Extrair o Cloud Provider e a conta do caminho do arquivo
+            # Extract Cloud Provider and Accounts path
             cloud_provider=$(echo $file | cut -d'/' -f2)
             account=$(echo $file | cut -d'/' -f3)
 
-            # Adicionar o Cloud Provider e a conta aos arrays
+            # Add the Cloud Provider and accounts inside arrays
             if [[ ! " ${cloud_providers[@]} " =~ " ${cloud_provider} " ]]; then
               cloud_providers+=("$cloud_provider")
             fi
@@ -74,33 +66,27 @@ jobs:
             fi
           done
 
-          # Verificar se há mais de um Cloud Provider modificado
+          # To check if are more Cloud Prroviders modified 
           if [ ${#cloud_providers[@]} -gt 1 ]; then
-            echo "Favor modificar somente um Cloud Provider por vez."
+            echo "Please modify only one Cloud Provider at a time."
             exit 1
           fi
 
-          # Verificar se há mais de uma conta modificada dentro do Cloud Provider
+          # Check if there is more than one modified account within the Cloud Provider
           if [ ${#accounts[@]} -gt 1 ]; then
-            echo "Favor modificar somente uma conta por vez."
+            echo "Please modify only one Account at a time."
             exit 1
           fi
 
-          # Retornar o caminho da conta modificada
+          # Return the modified account path
           if [ ${#accounts[@]} -eq 1 ]; then
-            echo "Conta modificada: infra/${cloud_providers[0]}/${accounts[0]}"
+            echo "Modified account: infra/${cloud_providers[0]}/${accounts[0]}"
             FILE_PATH="infra/${cloud_providers[0]}/${accounts[0]}"
             echo "WORKDIR=$FILE_PATH" >> $GITHUB_ENV
           else
-            echo "Nenhuma modificação detectada em infra/aws, infra/gcp ou infra/oci."
+            echo "No modifications detected in infra/aws, infra/gcp, infra/oci etc..."
             exit 1
           fi
-
-      - name: Authenticate in the AWS
-        uses: aws-actions/configure-aws-credentials@v4
-        with: 
-          role-to-assume: "${{ env.AWS_ROLE }}"
-          aws-region: "${{ env.AWS_REGION }}"
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
@@ -116,6 +102,30 @@ jobs:
       - name: Terraform Validate
         id: validate
         run: terraform -chdir=${{ env.WORKDIR }} validate -no-color
+
+  plan:
+    needs: [validate]
+    runs-on: ubuntu-latest
+    env:  
+      WORKDIR: ${{ needs.validate.outputs.workdir }}
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate in the AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with: 
+          role-to-assume: "${{ env.AWS_ROLE }}"
+          aws-region: "${{ env.AWS_REGION }}"
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
 
       - name: Terraform Workspace
         id: workspace
@@ -134,7 +144,7 @@ jobs:
 
       - name: Comment Plan Output
         uses: actions/github-script@v6
-        # if: always() && github.event_name == 'pull_request'
+        
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -182,16 +192,11 @@ jobs:
             })
       
   apply: 
-    if: >
-      github.event_name == 'issue_comment' &&
-      github.event.issue.pull_request &&
-      github.event.comment.body == '/apply'
     runs-on: ubuntu-latest
-    
-    
+    needs: [plan]
     env: 
       ENV: ${{ inputs.environment }}
-      WORKDIR: ${{ needs.plan.outputs.workdir }}
+      WORKDIR: ${{ needs.validate.outputs.workdir }}
       
     defaults:
       run:
@@ -201,6 +206,7 @@ jobs:
 
       - name: Debug Github
         run: echo ${{ toJSON(github) }}
+        continue-on-error: true
 
 
   #     - name: Notify Applying Settings
