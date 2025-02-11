@@ -41,5 +41,9 @@ jobs:
       github.event.comment.body == '/apply'
     runs-on: ubuntu-latest
     permissions:
-      issues: write  
-    run: echo "test apply"
+      issues: write 
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: test apply
+        run: echo "test apply"
