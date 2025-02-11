@@ -26,6 +26,8 @@ jobs:
         with:
           labels: |
             DEV
+          colors: |
+            7DDA58
 
   terraform:
     uses: ./.github/workflows/terraform.yml
