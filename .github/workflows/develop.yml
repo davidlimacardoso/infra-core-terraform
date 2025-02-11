@@ -4,10 +4,6 @@ on:
   pull_request:
     branches:
       - develop
-    types:
-      - opened
-      - synchronize
-      - reopened
     paths:
       - 'infra/**'
   issue_comment:
@@ -20,35 +16,20 @@ permissions:
 
 jobs:
 
-  add_label:
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout
-        uses: actions/checkout@v2
+  # add_label:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: checkout
+  #       uses: actions/checkout@v2
 
-      - name: add label
-        uses: actions-ecosystem/action-add-labels@v1
-        with:
-          labels: |
-            dev
+  #     - name: add label
+  #       uses: actions-ecosystem/action-add-labels@v1
+  #       with:
+  #         labels: |
+  #           dev
 
   terraform:
     uses: ./.github/workflows/terraform.yml
     with:
       environment: dev
     secrets: inherit
-
-  test_apply:
-    if: >
-      github.event_name == 'issue_comment' &&
-      github.event.issue.pull_request &&
-      github.event.comment.body == '/apply'
-    runs-on: ubuntu-latest
-    permissions:
-      issues: write 
-    steps:
-      - name: checkout
-        uses: actions/checkout@v2
-      - name: test apply
-        run: echo "test apply"
-        continue-on-error: true
