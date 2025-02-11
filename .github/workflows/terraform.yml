@@ -177,11 +177,16 @@ jobs:
 
             // Merge modified lines into a single string
             planOutput = modifiedLines.join('\n');
-            const planEmoji = ${{ steps.plan.outcome }} == 'success' ? '✅' : '❌';
-            const fmtEmoji = ${{ env.FMT }} == 'success' ? '✅' : '❌';
+
+            const planOutcome = '${{ steps.terraform-plan.outcome }}'; // Capture o outcome do step
+            const fmtOutcome = '${{ env.FMT }}'; // Capture o outcome do fmt
+
+            const planEmoji = planOutcome == 'success' ? '✅' : '❌';
+            const fmtEmoji = fmtOutcome == 'success' ? '✅' : '❌';
+
             const output = `#### Terraform Format and Style 🖌\`${{ env.FMT }} ${fmtEmoji}\`
-            #### Terraform Workspace 🤖\`${{ steps.terraform-workspace.outcome }} ${planEmoji}\`
-            #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+            #### Terraform Workspace \`${{ env.ENV }}\` 🤖\`${{ steps.terraform-workspace.outcome }}\`
+            #### Terraform Plan 📖\`${{ steps.terraform-plan.outcome }} ${planEmoji}\`
             <details><summary>Show Plan</summary>
   
             \`\`\`diff
