@@ -215,6 +215,7 @@ jobs:
     runs-on: ubuntu-latest
     env:  
       WORKDIR: ${{ needs.validate.outputs.workdir }}
+
     steps:
     - name: Manual Approval
       uses: trstringer/manual-approval@v1
@@ -225,7 +226,8 @@ jobs:
         issue-title: "Deploying v1.0.0 to develop"
         issue-body: "Review the terraform plan, then approve or deny the deployment of v1.0.0 to develop."
         exclude-workflow-initiator-as-approver: false
-
+    - name: Terraform Apply
+      run: echo "Applying..."
     # runs-on: ubuntu-latest
     # needs: [ plan ]
     # env: 
