@@ -23,9 +23,9 @@ jobs:
     outputs:
       provider: ${{ env.PROVIDER }}
       workdir: ${{ env.WORKDIR }}
-      account: ${{ env.ACCOUNT }}
+      account_id: ${{ env.ACCOUNT_ID }}
       account_name: ${{ env.ACCOUNT_NAME }}
-      provider_credentials: ${{ env.PROVIDER_CREDENTIALS }}
+      provider_credentials: ${{ env.CREDENTIALS }}
     
     defaults:
       run:
