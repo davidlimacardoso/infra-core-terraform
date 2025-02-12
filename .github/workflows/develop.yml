@@ -26,7 +26,11 @@ jobs:
     steps:
     - name: Show info
       run: |
-        echo " ${{ needs.provider.outputs.workdir }} "
+          echo "Work Directory: ${{ needs.provider.outputs.workdir }}"
+          echo "Account Name: ${{ needs.provider.outputs.account_name }}"
+          echo "Account ID: ${{ needs.provider.outputs.account_id }}"
+          echo "Provider: ${{ needs.provider.outputs.provider }}"
+          echo "Credentials: ${{ needs.provider.outputs.credentials }}"
 
   # terraform:
   #   uses: ./.github/workflows/terraform.yml

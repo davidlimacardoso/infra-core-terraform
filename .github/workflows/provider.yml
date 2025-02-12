@@ -11,11 +11,6 @@ permissions:
   id-token: write
   contents: read
 
-env:
-  ROLE: ${{ secrets.AWS_ROLE }}
-  # AWS_ROLE: arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/${{ secrets.AWS_ROLE }}
-  # AWS_REGION: ${{ secrets.AWS_REGION }}
-
 jobs:
 
   extract_provider_info:
@@ -109,6 +104,6 @@ jobs:
             --arg role "arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/${{ secrets.AWS_ROLE }}" \
             --arg region "${{ secrets.AWS_REGION }}" \
             '{ROLE_ARN: $role, REGION: $region}' | tr -d '\n')
-          
+
           echo "CREDENTIALS=$CREDENTIALS" >> $GITHUB_ENV
       
