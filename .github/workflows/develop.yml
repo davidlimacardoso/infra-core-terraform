@@ -6,45 +6,17 @@ on:
       - develop
     paths:
       - 'infra/**'
-  issue_comment:
-    types: 
-      - created
     
 permissions:
-  issues: write
-
+  id-token: write
+  contents: read
+  pull-requests: write
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Debug Information
-      run: |
-        echo "Variável X: ${{ secrets.MY_SECRET }}"
-        echo "Diretório atual: $(pwd)"
-  comment:
-    if: ${{ github.event_name == 'issue_comment' && github.event.issue.pull_request && github.event.comment.body == '/apply' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Test Action
-        run: |
-          echo "Hello, World!"
-        id: test_action 
 
-  # add_label:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: checkout
-  #       uses: actions/checkout@v2
-
-  #     - name: add label
-  #       uses: actions-ecosystem/action-add-labels@v1
-  #       with:
-  #         labels: |
-  #           dev
-
-  # terraform:
-  #   uses: ./.github/workflows/terraform.yml
-  #   with:
-  #     environment: dev
-  #   secrets: inherit
+  terraform:
+    uses: ./.github/workflows/terraform.yml
+    with:
+      environment: dev
+    secrets: inherit
+    
