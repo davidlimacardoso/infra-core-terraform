@@ -1,0 +1,329 @@
+name: "Terraform Workflow"
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+
+permissions:
+  pull-requests: write
+  id-token: write
+  contents: read
+
+env:
+  ENV: ${{ inputs.environment }}
+  # AWS_ROLE: arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/${{ secrets.AWS_ROLE }}
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+
+jobs:
+
+
+  cloud_provider_info:
+    runs-on: ubuntu-latest
+    outputs:
+      provider: ${{ env.PROVIDER }}
+      workdir: ${{ env.WORKDIR }}
+      account_id: ${{ env.ACCOUNT_ID }}
+      account_name: ${{ env.ACCOUNT_NAME }}
+      credentials: ${{ env.CREDENTIALS }}
+    
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get modified files from GitHub API and generate work directory
+        id: get-provider
+        run: |
+          BASE_REF="${{ github.base_ref }}"
+          HEAD_REF="${{ github.head_ref }}"
+          REPOSITORY="${{ github.repository }}"
+
+          # GitHub API URL load diff between base and head commit
+          API_URL="https://api.github.com/repos/${REPOSITORY}/compare/${BASE_REF}...${HEAD_REF}"
+
+          # Load modified files
+          response=$(curl -s $API_URL)
+
+          # Filter files that start with 'infra/'
+          files=$(echo "$response" | jq -r '.files[] | select(.filename | startswith("infra/")) | .filename')
+
+          # Arrays to save Cloud Providers and modified accounts
+          cloud_providers=()
+          accounts=()
+
+          # Analizys modified files
+          for file in $files; do
+            # Extract Cloud Provider and Accounts path
+            cloud_provider=$(echo $file | cut -d'/' -f2)
+            account=$(echo $file | cut -d'/' -f3)
+
+            # Add the Cloud Provider and accounts inside arrays
+            if [[ ! " ${cloud_providers[@]} " =~ " ${cloud_provider} " ]]; then
+              cloud_providers+=("$cloud_provider")
+            fi
+            if [[ ! " ${accounts[@]} " =~ " ${account} " ]]; then
+              accounts+=("$account")
+            fi
+          done
+
+          # To check if are more Cloud Prroviders modified 
+          if [ ${#cloud_providers[@]} -gt 1 ]; then
+            echo "Please modify only one Cloud Provider at a time."
+            exit 1
+          fi
+
+          # Check if there is more than one modified account within the Cloud Provider
+          if [ ${#accounts[@]} -gt 1 ]; then
+            echo "Please modify only one Account at a time."
+            exit 1
+          fi
+
+          # Return the modified account path
+          if [ ${#accounts[@]} -eq 1 ]; then
+            echo "Modified account: infra/${cloud_providers[0]}/${accounts[0]}"
+            FILE_PATH="infra/${cloud_providers[0]}/${accounts[0]}"
+            echo "WORKDIR=$FILE_PATH" >> $GITHUB_ENV
+            echo "ACCOUNT_NAME=${accounts[0]}" >> $GITHUB_ENV
+            echo "PROVIDER=${cloud_providers[0]}" >> $GITHUB_ENV
+          else
+            echo "No modifications detected in infra/aws, infra/gcp, infra/oci etc..."
+            exit 1
+          fi
+
+      - name: Load account id from **/account_config.json
+        id: account-id
+        run: |
+          ACCOUNT_ID="$(jq -r '.account_id' ./${{ env.WORKDIR }}/account_config.json)"
+          echo "ACCOUNT_ID=$ACCOUNT_ID" >> $GITHUB_ENV
+
+      # If you have one more cloud providers, you need to set each then 
+      - name: AWS Authentication
+        if: ${{ env.PROVIDER }} == 'aws'
+        id: aws-auth
+        uses: aws-actions/configure-aws-credentials@v4
+        with: 
+          role-to-assume: "arn:aws:iam::${{ env.ACCOUNT_ID }}:role/${{ secrets.AWS_ROLE }}"
+          aws-region: "${{ env.AWS_REGION }}"
+      
+  validate_format:
+    needs: [ cloud_provider_info ]
+    runs-on: ubuntu-latest
+    outputs:
+      tf_validate: ${{ steps.terraform-validate.outcome }}
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        id: terraform-init
+        run: terraform -chdir=${{ env.WORKDIR }} init
+
+      - name: Terraform Fmt
+        id: terraform-format
+        run: terraform -chdir=${{ env.WORKDIR }} fmt -check
+   
+      - name: Terraform Validate
+        id: terraform-validate
+        run: terraform -chdir=${{ env.WORKDIR }} validate -no-color
+
+  plan:
+    needs: [ validate_format ]
+    runs-on: ubuntu-latest
+    env:  
+    #   WORKDIR: ${{ needs.validate_format.outputs.workdir }}
+      TF_VALIDATE: ${{ needs.validate_format.outputs.tf_validate }}
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # - name: Authenticate in the AWS
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with: 
+      #     role-to-assume: "${{ env.AWS_ROLE }}"
+      #     aws-region: "${{ env.AWS_REGION }}"
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform init
+        id: terraform-init
+        run: terraform -chdir=${{ env.WORKDIR }} init
+
+      - name: Terraform Workspace
+        id: terraform-workspace
+        run: terraform -chdir=${{ env.WORKDIR }} workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
+
+      - name: Terraform Plan
+        id: terraform-plan
+        run: |
+          terraform -chdir=${{ env.WORKDIR }} plan -detailed-exitcode -no-color -input=false -var-file=envs/${{ env.ENV }}.tfvars -out ${{ env.ENV }}.tfplan > ${{ env.ENV }}_plan_output.txt
+        continue-on-error: true
+ 
+      - name: Hide Previous Comments
+        uses: kanga333/comment-hider@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Comment Plan Output
+        uses: actions/github-script@v6
+        
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            let planOutput = fs.readFileSync('${{ env.ENV }}_plan_output.txt', 'utf8');
+
+            const lines = planOutput.split('\n');
+            const modifiedLines = lines.map(line => {
+                // Analize if line start with this signals: '+', '-' ou '~'
+                const trimmedLine = line.trim();
+                if (trimmedLine.startsWith('+') || trimmedLine.startsWith('-') || trimmedLine.startsWith('~')) {
+                    // Capture the sihnal
+                    const sign = trimmedLine[0];
+                    // Remove the sign and the first space, then add the corresponding sign at the beginning
+                    let newLine = line.replace(/^[+\-~]\s*/, ' ').replace(/^ /, sign === '~' ? '! ' : sign + ' ');
+                    return newLine;
+                }
+                return line;
+            });
+
+            // Merge modified lines into a single string
+            planOutput = modifiedLines.join('\n');
+
+            const planOutcome = '${{ steps.terraform-plan.outcome }}'; 
+            const tfValidateOutcome = '${{ env.FMT }}'; 
+            const workspaceOutcome = '${{ steps.terraform-workspace.outcome }}';
+
+            const planEmoji = planOutcome == 'success' ? '✅' : '❌';
+            const tfValEmoji = tfValidateOutcome == 'success' ? '✅' : '❌';
+            const workspaceEmoji = workspaceOutcome == 'success' ? '✅' : '❌';
+
+            const output = `#### Terraform Format and Style 🖌\`${{ env.TF_VALIDATE }} ${tfValEmoji}\`
+            #### Terraform Workspace \`${{ env.ENV }}\` 🤖 \`${{ steps.terraform-workspace.outcome }} ${workspaceEmoji}\`
+            #### Terraform Plan 📖 \`${{ steps.terraform-plan.outcome }} ${planEmoji}\`
+            <details><summary>Show Plan 🔎 </summary>
+  
+            \`\`\`diff
+            ${planOutput}
+            \`\`\`
+  
+            </details>
+            \n
+  
+            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+      
+      - name: Terraform plan status
+        if: steps.plan.outcome == 'failure'
+        run: exit 1
+
+  apply: 
+    needs: [ plan ]
+    runs-on: ubuntu-latest
+ 
+    # env: 
+    #   ENV: ${{ inputs.environment }}
+    #   WORKDIR: ${{ needs.validate.outputs.workdir }}
+      
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Debug Github
+        run: echo ${{ toJSON(github) }}
+        continue-on-error: true
+
+
+  #     - name: Notify Applying Settings
+  #       uses: actions/github-script@v6
+  #       with:
+  #         github-token: ${{ secrets.GITHUB_TOKEN }}
+  #         script: |
+  #           const output = "\>\:rocket\: Applying the settings...";
+  #           github.rest.issues.createComment({
+  #             issue_number: context.issue.number,
+  #             owner: context.repo.owner,
+  #             repo: context.repo.repo,
+  #             body: output
+  #           });
+              
+  #     - name: Checkout code
+  #       uses: actions/checkout@v3
+
+  #     - name: Set up Terraform
+  #       uses: hashicorp/setup-terraform@v3
+
+  #     - name: Terraform Init
+  #       id: init
+  #       run: terraform -chdir=${{ env.WORKDIR }} init
+        
+  #     - name: Terraform Workspace
+  #       id: workspace
+  #       run: |
+  #         terraform -chdir=${{ env.WORKDIR }} workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
+
+  #     - name: Terraform Apply
+  #       id: apply
+  #       run: terraform -chdir=${{ env.WORKDIR }} apply -no-color {{ env.ENV }}.tfplan
+  #       continue-on-error: true
+
+  #     - name: Comment Apply Output
+  #       uses: actions/github-script@v6
+  #       with:
+  #         github-token: ${{ secrets.GITHUB_TOKEN }}
+  #         script: |
+  #           const command = context.payload.comment.body;
+  #           const outcome = "${{ steps.apply.outcome }}";
+  #           const emoji = outcome === 'failure' ? ':x:' : ':white_check_mark:';
+  #           const output = `#### Terraform Apply Output \`${outcome}\` ${emoji}
+  #           \`\`\`\n
+  #           ${{ steps.apply.outputs.stdout }} 
+  #           ${{ steps.apply.outputs.stderr }}
+  #           \`\`\`
+  #           *Executed by: @${{ github.actor }}, Terraform command: \`${command}\`*`;
+  #           github.rest.issues.createComment({
+  #             issue_number: context.issue.number,
+  #             owner: context.repo.owner,
+  #             repo: context.repo.repo,
+  #             body: output
+  #           })
+  #     # - name: Merge Pull Request
+  #     #   if: steps.apply.outcome == 'success'
+  #     #   uses: actions/github-script@v6
+  #     #   with:
+  #     #     github-token: ${{ secrets.GITHUB_TOKEN }}
+  #     #     script: |
+  #     #       await github.rest.pulls.merge({
+  #     #         owner: context.repo.owner,
+  #     #         repo: context.repo.repo,
+  #     #         pull_number: context.issue.number,
+  #     #         merge_method: 'merge'
+  #     #       });
+  #     - name: Hide Previous Comments
+  #       if: steps.apply.outcome != 'success'
+  #       uses: kanga333/comment-hider@master
+  #       with:
+  #         github_token: ${{ secrets.GITHUB_TOKEN }}
