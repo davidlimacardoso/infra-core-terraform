@@ -7,7 +7,8 @@ on:
     paths:
       - 'infra/**'
   issue_comment:
-    types: [created]
+    types: 
+      - created
     
 permissions:
   id-token: write
@@ -19,7 +20,7 @@ permissions:
 jobs:
 
   comment:
-    if: contains(github.event.comment.body, 'apply')
+    if: ${{ github.event.issue.pull_request && github.event.comment.body == '/apply' }}
     runs-on: ubuntu-latest
     steps:
       - name: Add comment to PR
