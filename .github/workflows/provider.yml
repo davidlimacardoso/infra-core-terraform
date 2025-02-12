@@ -19,7 +19,7 @@ env:
 
 jobs:
 
-  :
+  extract_provider_info:
     runs-on: ubuntu-latest
     outputs:
       provider: ${{ env.PROVIDER }}
