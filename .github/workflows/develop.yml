@@ -14,27 +14,9 @@ permissions:
 
 jobs:
 
-  provider:
-    uses: ./.github/workflows/provider.yml
+  terraform:
+    uses: ./.github/workflows/terraform.yml
     with:
       environment: dev
     secrets: inherit
-
-  test_provider:
-    needs: [ provider ]
-    runs-on: ubuntu-latest
-    steps:
-    - name: Show info
-      run: |
-          echo "Work Directory: ${{ needs.provider.outputs.workdir }}"
-          echo "Account Name: ${{ needs.provider.outputs.account_name }}"
-          echo "Account ID: ${{ needs.provider.outputs.account_id }}"
-          echo "Provider: ${{ needs.provider.outputs.provider }}"
-          echo "Credentials: ${{ needs.provider.outputs.credentials }}"
-
-  # terraform:
-  #   uses: ./.github/workflows/terraform.yml
-  #   with:
-  #     environment: dev
-  #   secrets: inherit
     
