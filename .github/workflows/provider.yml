@@ -106,8 +106,8 @@ jobs:
         id: aws-auth
         run: | 
           CREDENTIALS=$(
-            jq -n 
-              --arg role "${{ secrets.AWS_ROLE }}" \ 
+            jq -n \
+              --arg role "${{ secrets.AWS_ROLE }}" \
               --arg region "${{ secrets.AWS_REGION }}" \
               '{ROLE_ARN: $role, REGION: $region}'
             )
