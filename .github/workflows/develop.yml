@@ -23,8 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      
-      - uses: jmatsu/detect-issue-comment-to-pr-action@<tag>
+
+      - uses: jmatsu/detect-issue-comment-to-pr-action@master
         id: filter
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
