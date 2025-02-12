@@ -27,7 +27,7 @@ jobs:
       workdir: ${{ env.WORKDIR }}
       account_id: ${{ env.ACCOUNT_ID }}
       account_name: ${{ env.ACCOUNT_NAME }}
-      credentials: ${{ steps.aws-auth.outputs }}
+      credentials: ${{ steps.aws-auth.outputs.* }}
     
     defaults:
       run:
