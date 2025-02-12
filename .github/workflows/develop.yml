@@ -4,8 +4,8 @@ on:
   pull_request:
     branches:
       - develop
-    paths:
-      - 'infra/**'
+    # paths:
+    #   - 'infra/**'
   issue_comment:
     types: 
       - created
