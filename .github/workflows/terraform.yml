@@ -27,7 +27,7 @@ jobs:
       workdir: ${{ env.WORKDIR }}
       account_id: ${{ env.ACCOUNT_ID }}
       account_name: ${{ env.ACCOUNT_NAME }}
-      credentials: ${{ env.CREDENTIALS }}
+      credentials: ${{ steps.aws-auth.outputs.credentials }}
     
     defaults:
       run:
@@ -110,13 +110,16 @@ jobs:
         with: 
           role-to-assume: "arn:aws:iam::${{ env.ACCOUNT_ID }}:role/${{ secrets.AWS_ROLE }}"
           aws-region: "${{ env.AWS_REGION }}"
+        output:
+          credentials: ${{ steps.aws-auth.outputs.credentials }}
       
   validate_format:
     needs: [ cloud_provider_info ]
     runs-on: ubuntu-latest
     env: 
       WORKDIR: ${{ needs.cloud_provider_info.outputs.workdir }}
-      
+      CREDENTIALS: ${{ needs.cloud_provider_info.outputs.credentials }}
+
     outputs:
       tf_validate: ${{ steps.terraform-validate.outcome }}
     defaults:
