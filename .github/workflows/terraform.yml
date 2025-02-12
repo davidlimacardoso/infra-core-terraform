@@ -110,7 +110,7 @@ jobs:
         with: 
           role-to-assume: "arn:aws:iam::${{ env.ACCOUNT_ID }}:role/${{ secrets.AWS_ROLE }}"
           aws-region: "${{ env.AWS_REGION }}"
-        output-credentials: true
+          output-credentials: true
               
   validate_format:
     needs: [ cloud_provider_info ]
