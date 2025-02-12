@@ -14,9 +14,20 @@ permissions:
 
 jobs:
 
-  terraform:
-    uses: ./.github/workflows/terraform.yml
+  provider:
+    uses: ./.github/workflows/provider.yml
+    secrets: inherit
     with:
       environment: dev
-    secrets: inherit
+
+  test_provider:
+    needs: [ provider ]
+    run: |
+      echo " ${{ needs.provider.outputs.workdir }} "
+
+  # terraform:
+  #   uses: ./.github/workflows/terraform.yml
+  #   with:
+  #     environment: dev
+  #   secrets: inherit
     
