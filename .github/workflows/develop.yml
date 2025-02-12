@@ -17,8 +17,6 @@ jobs:
   provider:
     uses: ./.github/workflows/provider.yml
     secrets: inherit
-    with:
-      environment: dev
 
   test_provider:
     needs: [ provider ]
