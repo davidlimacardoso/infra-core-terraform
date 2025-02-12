@@ -20,14 +20,18 @@ permissions:
 jobs:
 
   comment:
-    - uses: jmatsu/detect-issue-comment-to-pr-action@<tag>
-      id: filter
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    - run: echo "I'm a pull request (${{ steps.filter.outputs.pull_number }})"
-      if: steps.filter.outputs.is_pull_request == 'true'
-    - run: echo "I'm not a pull request"
-      if: steps.filter.outputs.is_pull_request != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - uses: jmatsu/detect-issue-comment-to-pr-action@<tag>
+        id: filter
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: echo "I'm a pull request (${{ steps.filter.outputs.pull_number }})"
+        if: steps.filter.outputs.is_pull_request == 'true'
+      - run: echo "I'm not a pull request"
+        if: steps.filter.outputs.is_pull_request != 'true'
 
   # add_label:
   #   runs-on: ubuntu-latest
