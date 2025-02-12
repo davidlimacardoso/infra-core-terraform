@@ -114,6 +114,9 @@ jobs:
   validate_format:
     needs: [ cloud_provider_info ]
     runs-on: ubuntu-latest
+    env: 
+      WORKDIR: ${{ needs.cloud_provider_info.outputs.workdir }}
+      
     outputs:
       tf_validate: ${{ steps.terraform-validate.outcome }}
     defaults:
