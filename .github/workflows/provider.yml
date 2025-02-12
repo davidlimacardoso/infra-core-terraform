@@ -97,17 +97,17 @@ jobs:
       - name: Load account informations
         id: account-id
         run: |
-          ACCOUNT_ID="$(jq -r '.account_id' ./{{ env.WORKDIR }}/account_config.json)"
+          ACCOUNT_ID="$(jq -r '.account_id' ./${{ steps.get-provider.outputs.workdir }}/account_config.json)"
           echo "ACCOUNT_ID=$ACCOUNT_ID" >> $GITHUB_ENV
 
       # If you have one more cloud providers, you need to set each then 
       - name: AWS Authentication
-        if: ${{ env.PROVIDER }} == 'aws'
+        if: ${{ steps.get-dir.outputs.provider }} == 'aws'
         id: aws-auth
         run: | 
           # Definindo o array de autenticação
           CREDENTIALS=(
-            ["ROLE_ARN"]="arn:aws:iam::${{ env.ACCOUNT_ID }}:role/${{ secrets.AWS_ROLE }}"
+            ["ROLE_ARN"]="arn:aws:iam::${{ steps.account-id.outputs.account_id }}:role/${{ secrets.AWS_ROLE }}"
             ["REGION"]="${{ secrets.AWS_REGION }}"
           )
           echo "CREDENTIALS=$CREDENTIALS" >> $GITHUB_ENV
