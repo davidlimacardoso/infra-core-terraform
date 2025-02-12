@@ -12,7 +12,6 @@ permissions:
   contents: read
 
 env:
-  ENV: ${{ inputs.environment }}
   ROLE: ${{ secrets.AWS_ROLE }}
   # AWS_ROLE: arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/${{ secrets.AWS_ROLE }}
   # AWS_REGION: ${{ secrets.AWS_REGION }}
