@@ -27,7 +27,7 @@ jobs:
       workdir: ${{ env.WORKDIR }}
       account_id: ${{ env.ACCOUNT_ID }}
       account_name: ${{ env.ACCOUNT_NAME }}
-      credentials: ${{ steps.aws-auth.outputs.credentials }}
+      credentials: ${{ steps.aws-auth.outputs }}
     
     defaults:
       run:
@@ -110,9 +110,8 @@ jobs:
         with: 
           role-to-assume: "arn:aws:iam::${{ env.ACCOUNT_ID }}:role/${{ secrets.AWS_ROLE }}"
           aws-region: "${{ env.AWS_REGION }}"
-        output:
-          credentials: ${{ steps.aws-auth.outputs.credentials }}
-      
+        output-credentials: true
+              
   validate_format:
     needs: [ cloud_provider_info ]
     runs-on: ubuntu-latest
