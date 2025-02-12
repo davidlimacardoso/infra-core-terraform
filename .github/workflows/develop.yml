@@ -19,20 +19,20 @@ permissions:
 jobs:
 
   comment:
-  if: contains(github.event.comment.body, 'apply')
-  runs-on: ubuntu-latest
-  steps:
-    - name: Add comment to PR
-      env:
-        URL: ${{ github.event.issue.comments_url }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        curl \
-          -X POST \
-          $URL \
-          -H "Content-Type: application/json" \
-          -H "Authorization: token $GITHUB_TOKEN" \
-          --data '{ "body": "blah blah" }'
+    if: contains(github.event.comment.body, 'apply')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add comment to PR
+        env:
+          URL: ${{ github.event.issue.comments_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl \
+            -X POST \
+            $URL \
+            -H "Content-Type: application/json" \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            --data '{ "body": "blah blah" }'
 
   # add_label:
   #   runs-on: ubuntu-latest
