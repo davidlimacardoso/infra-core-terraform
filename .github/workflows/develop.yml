@@ -15,7 +15,13 @@ permissions:
 
 
 jobs:
-
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Debug Information
+      run: |
+        echo "Variável X: ${{ secrets.MY_SECRET }}"
+        echo "Diretório atual: $(pwd)"
   comment:
     if: ${{ github.event_name == 'issue_comment' && github.event.issue.pull_request && github.event.comment.body == '/apply' }}
     runs-on: ubuntu-latest
