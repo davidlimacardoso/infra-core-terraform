@@ -212,6 +212,11 @@ jobs:
         run: exit 1
 
   apply: 
+    needs: [ plan ]
+    runs-on: ubuntu-latest
+    env:  
+      WORKDIR: ${{ needs.validate.outputs.workdir }}
+    steps:
     - name: Manual Approval
       uses: trstringer/manual-approval@v1
       with:
