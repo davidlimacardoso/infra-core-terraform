@@ -105,11 +105,6 @@ jobs:
         if: ${{ env.PROVIDER }} == 'aws'
         id: aws-auth
         run: | 
-          CREDENTIALS=$(
-            jq -n \
-              --arg role "${{ secrets.AWS_ROLE }}" \
-              --arg region "${{ secrets.AWS_REGION }}" \
-              '{ROLE_ARN: $role, REGION: $region}'
-            )
+          CREDENTIALS=$(jq -n --arg role "${{ secrets.AWS_ROLE }}" --arg region "${{ secrets.AWS_REGION }}" '{ROLE_ARN: $role, REGION: $region}')
           echo "CREDENTIALS=$CREDENTIALS" >> $GITHUB_ENV
       
