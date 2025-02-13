@@ -13,6 +13,27 @@ This project uses Terraform to manage AWS infrastructure with a workflow automat
 - GitHub Actions enabled
 - Access to AWS with appropriate permissions
 
+### Create OIDC Role
+
+- Create a bucket terraform state
+
+ex: infra-core-terraform-xyz
+
+- Create a DynamoDB Table to lock id 
+
+ex: infra_core_terraform_lock  
+
+- Create the first resources roles do OIDC
+
+```bash
+
+    terraform apply \
+        -var-file=envs/dev.tfvars \
+        -target="aws_iam_openid_connect_provider.github_actions_oidc" \
+        -target="aws_iam_role.github_actions_iac_role" \
+        -target="aws_iam_role_policy.github_actions_iac_policy"
+```
+
 ## Project Structure
 ```
 .
@@ -25,7 +46,6 @@ This project uses Terraform to manage AWS infrastructure with a workflow automat
 │ └── {environment}
 │ └── terraform.tfvars
 ```
-
 
 ## Configuration
 
