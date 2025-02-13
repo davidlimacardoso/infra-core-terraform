@@ -260,72 +260,71 @@ jobs:
         run: exit 1
 
   apply: 
-    needs: [ plan ]
+    needs: [ cloud_provider_info, plan ]
     runs-on: ubuntu-latest
- 
+    env:  
+      WORKDIR: ${{ needs.cloud_provider_info.outputs.workdir }}
+      AWS_ROLE: ${{ needs.cloud_provider_info.outputs.aws_role }}
+      TF_VALIDATE: ${{ needs.validate_format.outputs.tf_validate }}
+      REGION: ${{ needs.cloud_provider_info.outputs.region }}
     defaults:
       run:
         shell: bash
 
     steps:
-      - name: Debug Github
-        run: echo ${{ toJSON(github) }}
+      - name: Notify Applying Settings
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = "\>\:rocket\: Applying the settings...";
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+              
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        id: init
+        run: terraform -chdir=${{ env.WORKDIR }} init
+        
+      - name: Terraform Workspace
+        id: workspace
+        run: |
+          terraform -chdir=${{ env.WORKDIR }} workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
+
+      - name: Terraform Apply
+        id: apply
+        run: terraform -chdir=${{ env.WORKDIR }} apply -no-color {{ env.ENV }}.tfplan
         continue-on-error: true
 
-
-  #     - name: Notify Applying Settings
-  #       uses: actions/github-script@v6
-  #       with:
-  #         github-token: ${{ secrets.GITHUB_TOKEN }}
-  #         script: |
-  #           const output = "\>\:rocket\: Applying the settings...";
-  #           github.rest.issues.createComment({
-  #             issue_number: context.issue.number,
-  #             owner: context.repo.owner,
-  #             repo: context.repo.repo,
-  #             body: output
-  #           });
-              
-  #     - name: Checkout code
-  #       uses: actions/checkout@v3
-
-  #     - name: Set up Terraform
-  #       uses: hashicorp/setup-terraform@v3
-
-  #     - name: Terraform Init
-  #       id: init
-  #       run: terraform -chdir=${{ env.WORKDIR }} init
-        
-  #     - name: Terraform Workspace
-  #       id: workspace
-  #       run: |
-  #         terraform -chdir=${{ env.WORKDIR }} workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
-
-  #     - name: Terraform Apply
-  #       id: apply
-  #       run: terraform -chdir=${{ env.WORKDIR }} apply -no-color {{ env.ENV }}.tfplan
-  #       continue-on-error: true
-
-  #     - name: Comment Apply Output
-  #       uses: actions/github-script@v6
-  #       with:
-  #         github-token: ${{ secrets.GITHUB_TOKEN }}
-  #         script: |
-  #           const command = context.payload.comment.body;
-  #           const outcome = "${{ steps.apply.outcome }}";
-  #           const emoji = outcome === 'failure' ? ':x:' : ':white_check_mark:';
-  #           const output = `#### Terraform Apply Output \`${outcome}\` ${emoji}
-  #           \`\`\`\n
-  #           ${{ steps.apply.outputs.stdout }} 
-  #           ${{ steps.apply.outputs.stderr }}
-  #           \`\`\`
-  #           *Executed by: @${{ github.actor }}, Terraform command: \`${command}\`*`;
-  #           github.rest.issues.createComment({
-  #             issue_number: context.issue.number,
-  #             owner: context.repo.owner,
-  #             repo: context.repo.repo,
-  #             body: output
-  #           })
+      - name: Comment Apply Output
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const command = context.payload.comment.body;
+            const outcome = "${{ steps.apply.outcome }}";
+            const emoji = outcome === 'failure' ? ':x:' : ':white_check_mark:';
+            const output = `#### Terraform Apply Output \`${outcome}\` ${emoji}
+            \`\`\`\n
+            ${{ steps.apply.outputs.stdout }} 
+            ${{ steps.apply.outputs.stderr }}
+            \`\`\`
+            *Executed by: @${{ github.actor }}, Terraform command: \`${command}\`*`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
   #     # - name: Merge Pull Request
   #     #   if: steps.apply.outcome == 'success'
   #     #   uses: actions/github-script@v6
