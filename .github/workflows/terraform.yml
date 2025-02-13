@@ -20,7 +20,7 @@ env:
   ENV: ${{ inputs.environment }}
   # AWS_ROLE: arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/${{ secrets.AWS_ROLE }}
   PROVIDER_OIDC_ROLE: ${{ inputs.provider_oidc_role }}
-  AWS_REGION: ${{ secrets.AWS_REGION }}
+  # AWS_REGION: ${{ secrets.AWS_REGION }}
 
 jobs:
 
@@ -31,6 +31,7 @@ jobs:
       provider: ${{ env.PROVIDER }}
       workdir: ${{ env.WORKDIR }}
       account_id: ${{ env.ACCOUNT_ID }}
+      region: ${{ env.REGION }}
       account_name: ${{ env.ACCOUNT_NAME }}
       aws_role: ${{ env.AWS_ROLE }}
     defaults:
@@ -131,6 +132,7 @@ jobs:
     env: 
       WORKDIR: ${{ needs.cloud_provider_info.outputs.workdir }}
       AWS_ROLE: ${{ needs.cloud_provider_info.outputs.aws_role }}
+      REGION: ${{ needs.cloud_provider_info.outputs.region }}
     outputs:
       tf_validate: ${{ steps.terraform-validate.outcome }}
     defaults:
@@ -142,12 +144,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: AWS Authentication
-        if: ${{ env.PROVIDER }} == 'aws'
         id: aws-auth
         uses: aws-actions/configure-aws-credentials@v4
         with: 
           role-to-assume: ${{ env.AWS_ROLE }}
-          aws-region: "${{ env.AWS_REGION }}"
+          aws-region: "${{ env.REGION }}"
           
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
@@ -171,6 +172,7 @@ jobs:
       WORKDIR: ${{ needs.cloud_provider_info.outputs.workdir }}
       AWS_ROLE: ${{ needs.cloud_provider_info.outputs.aws_role }}
       TF_VALIDATE: ${{ needs.validate_format.outputs.tf_validate }}
+      REGION: ${{ needs.cloud_provider_info.outputs.region }}
     defaults:
       run:
         shell: bash
@@ -183,7 +185,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with: 
           role-to-assume: "${{ env.AWS_ROLE }}"
-          aws-region: "${{ env.AWS_REGION }}"
+          aws-region: "${{ env.REGION }}"
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
