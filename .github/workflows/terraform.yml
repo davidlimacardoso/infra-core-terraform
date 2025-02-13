@@ -152,7 +152,7 @@ jobs:
         run: terraform -chdir=${{ env.WORKDIR }} validate -no-color
 
   plan:
-    needs: [ validate_format ]
+    needs: [ validate_format, cloud_provider_info ]
     runs-on: ubuntu-latest
     env:  
       WORKDIR: ${{ needs.cloud_provider_info.outputs.workdir }}
