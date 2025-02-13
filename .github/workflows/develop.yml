@@ -18,5 +18,6 @@ jobs:
     uses: ./.github/workflows/terraform.yml
     with:
       environment: dev
+      provider_oidc_role: github-actions-iac-role
     secrets: inherit
     

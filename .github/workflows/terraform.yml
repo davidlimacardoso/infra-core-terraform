@@ -15,7 +15,7 @@ permissions:
 env:
   ENV: ${{ inputs.environment }}
   # AWS_ROLE: arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/${{ secrets.AWS_ROLE }}
-  PROVIDER_ROLE_GITHUB: ${{ secrets.AWS_ROLE }}
+  PROVIDER_OIDC_ROLE: ${{ inputs.provider_oidc_role }}
   AWS_REGION: ${{ secrets.AWS_REGION }}
 
 jobs:
@@ -28,6 +28,7 @@ jobs:
       workdir: ${{ env.WORKDIR }}
       account_id: ${{ env.ACCOUNT_ID }}
       account_name: ${{ env.ACCOUNT_NAME }}
+      aws_role: ${{ env.AWS_ROLE }}
     defaults:
       run:
         shell: bash
@@ -100,14 +101,19 @@ jobs:
         run: |
           ACCOUNT_ID="$(jq -r '.account_id' ./${{ env.WORKDIR }}/account_config.json)"
           echo "ACCOUNT_ID=$ACCOUNT_ID" >> $GITHUB_ENV
+      
+      - name: Load AWS Role ARN
+        id: aws-role
+        run: |
+          AWS_ROLE="arn:aws:iam::${{ env.ACCOUNT_ID }}:role/${{ env.PROVIDER_OIDC_ROLE }}"
+          echo "AWS_ROLE=$AWS_ROLE" >> $GITHUB_ENVRole 
               
   validate_format:
     needs: [ cloud_provider_info ]
     runs-on: ubuntu-latest
     env: 
       WORKDIR: ${{ needs.cloud_provider_info.outputs.workdir }}
-      ACCOUNT_ID: ${{ needs.cloud_provider_info.outputs.account_id }}
-      PROVIDER: ${{ needs.cloud_provider_info.outputs.provider }}
+      AWS_ROLE: ${{ needs.cloud_provider_info.outputs.aws_role }}
     outputs:
       tf_validate: ${{ steps.terraform-validate.outcome }}
     defaults:
@@ -123,7 +129,7 @@ jobs:
         id: aws-auth
         uses: aws-actions/configure-aws-credentials@v4
         with: 
-          role-to-assume: arn:aws:iam::${{ env.ACCOUNT_ID }}:role/${{ secrets.PROVIDER_ROLE_GITHUB }}
+          role-to-assume: ${{ env.AWS_ROLE }}
           aws-region: "${{ env.AWS_REGION }}"
           
       - name: Set up Terraform
@@ -146,8 +152,7 @@ jobs:
     runs-on: ubuntu-latest
     env:  
       WORKDIR: ${{ needs.cloud_provider_info.outputs.workdir }}
-      ACCOUNT_ID: ${{ needs.cloud_provider_info.outputs.account_id }}
-      PROVIDER: ${{ needs.cloud_provider_info.outputs.provider }}
+      AWS_ROLE: ${{ needs.cloud_provider_info.outputs.aws_role }}
       TF_VALIDATE: ${{ needs.validate_format.outputs.tf_validate }}
     defaults:
       run:
@@ -157,12 +162,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: AWS Authentication
-        if: ${{ env.PROVIDER }} == 'aws'
-        id: aws-auth
+      - name: Authenticate in the AWS
         uses: aws-actions/configure-aws-credentials@v4
         with: 
-          role-to-assume: arn:aws:iam::${{ env.ACCOUNT_ID }}:role/${{ secrets.PROVIDER_ROLE_GITHUB }}
+          role-to-assume: "${{ env.AWS_ROLE }}"
           aws-region: "${{ env.AWS_REGION }}"
 
       - name: Set up Terraform
