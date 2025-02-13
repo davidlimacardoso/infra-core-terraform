@@ -11,19 +11,11 @@ on:
         default: github-actions-iac-role
         description: "The name of the role to assume in the OIDC provider account"
 
-permissions:
-  pull-requests: write
-  id-token: write
-  contents: read
-
 env:
   ENV: ${{ inputs.environment }}
-  # AWS_ROLE: arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/${{ secrets.AWS_ROLE }}
   PROVIDER_OIDC_ROLE: ${{ inputs.provider_oidc_role }}
-  # AWS_REGION: ${{ secrets.AWS_REGION }}
 
 jobs:
-
 
   cloud_provider_info:
     runs-on: ubuntu-latest
