@@ -41,69 +41,82 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Get modified files from GitHub API and generate work directory
+      - name: Get modified files in the repository and generate work directory and environments
         id: get-provider
         run: |
           BASE_REF="${{ github.base_ref }}"
           HEAD_REF="${{ github.head_ref }}"
           REPOSITORY="${{ github.repository }}"
 
-          # GitHub API URL load diff between base and head commit
+          ######## GitHub API URL load diff between base and head commit #######
           API_URL="https://api.github.com/repos/${REPOSITORY}/compare/${BASE_REF}...${HEAD_REF}"
 
-          # Load modified files
+          ######## Load modified files #######
           response=$(curl -s $API_URL)
 
-          # Filter files that start with 'infra/'
+          ######## Filter files that start with 'infra/' #######
           files=$(echo "$response" | jq -r '.files[] | select(.filename | startswith("infra/")) | .filename')
 
-          # Arrays to save Cloud Providers and modified accounts
+          ######## Arrays to save Cloud Providers and modified accounts #######
           cloud_providers=()
           accounts=()
+          regions=()
 
-          # Analizys modified files
+          ####### Analyze modified files #######
           for file in $files; do
-            # Extract Cloud Provider and Accounts path
+            # Extract Cloud Provider, Accounts path, and Region
             cloud_provider=$(echo $file | cut -d'/' -f2)
             account=$(echo $file | cut -d'/' -f3)
+            region=$(echo $file | cut -d'/' -f4)
 
-            # Add the Cloud Provider and accounts inside arrays
+            ####### Add the Cloud Provider, accounts, and region to arrays #######
             if [[ ! " ${cloud_providers[@]} " =~ " ${cloud_provider} " ]]; then
               cloud_providers+=("$cloud_provider")
             fi
             if [[ ! " ${accounts[@]} " =~ " ${account} " ]]; then
               accounts+=("$account")
             fi
+            if [[ ! " ${regions[@]} " =~ " ${region} " ]]; then
+              regions+=("$region")
+            fi
           done
 
-          # To check if are more Cloud Prroviders modified 
+          ####### To check if are more Cloud Providers modified #######
           if [ ${#cloud_providers[@]} -gt 1 ]; then
             echo "Please modify only one Cloud Provider at a time."
             exit 1
           fi
 
-          # Check if there is more than one modified account within the Cloud Provider
+          ####### Check if there is more than one modified account within the Cloud Provider #######
           if [ ${#accounts[@]} -gt 1 ]; then
             echo "Please modify only one Account at a time."
             exit 1
           fi
 
-          # Return the modified account path
+          ####### Check if more than one modified region within the Account #######
+          if [ ${#regions[@]} -gt 1 ]; then
+            echo "Please modify only one Region at a time."
+            exit 1
+          fi
+
+          ####### Return the modified account path #######
           if [ ${#accounts[@]} -eq 1 ]; then
-            echo "Modified account: infra/${cloud_providers[0]}/${accounts[0]}"
-            FILE_PATH="infra/${cloud_providers[0]}/${accounts[0]}"
+            echo "Modified account: infra/${cloud_providers[0]}/${accounts[0]}/${regions[0]}"
+            FILE_PATH="infra/${cloud_providers[0]}/${accounts[0]}/${regions[0]}"
             echo "WORKDIR=$FILE_PATH" >> $GITHUB_ENV
             echo "ACCOUNT_NAME=${accounts[0]}" >> $GITHUB_ENV
             echo "PROVIDER=${cloud_providers[0]}" >> $GITHUB_ENV
+            echo "REGION=${regions[0]}" >> $GITHUB_ENV
           else
             echo "No modifications detected in infra/aws, infra/gcp, infra/oci etc..."
             exit 1
           fi
 
-      - name: Load account id from **/account_config.json
+      - name: Load account id from **/account.json
         id: account-id
         run: |
-          ACCOUNT_ID="$(jq -r '.account_id' ./${{ env.WORKDIR }}/account_config.json)"
+          ACCOUNT_CONFIG_DIR="$(dirname "${{ env.WORKDIR }}")"
+          ACCOUNT_ID="$(jq -r '.account_id' "$ACCOUNT_CONFIG_DIR/account.json")"
           echo "ACCOUNT_ID=$ACCOUNT_ID" >> $GITHUB_ENV
       
       - name: Load AWS Role ARN
