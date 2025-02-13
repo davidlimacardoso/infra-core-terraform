@@ -195,6 +195,12 @@ jobs:
         run: |
           terraform -chdir=${{ env.WORKDIR }} plan -detailed-exitcode -no-color -input=false -var-file=envs/${{ env.ENV }}.tfvars -out ${{ env.ENV }}.tfplan > ${{ env.ENV }}_plan_output.txt
         continue-on-error: true
+
+      - name: Upload Planfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: ${{ env.ENV }}.tfplan
  
       - name: Hide Previous Comments
         uses: kanga333/comment-hider@master
@@ -288,6 +294,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Download Planfile
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.ENV }}.tfplan
+
+      - name: Terraform Apply
+        id: apply
+        run: terraform -chdir=${{ env.WORKDIR }} apply -no-color ${{ env.ENV }}.tfplan
+
       - name: Authenticate in the AWS
         uses: aws-actions/configure-aws-credentials@v4
         with: 
@@ -308,7 +323,7 @@ jobs:
 
       - name: Terraform Apply
         id: apply
-        run: terraform -chdir=${{ env.WORKDIR }} apply -no-color {{ env.ENV }}.tfplan
+        run: terraform -chdir=${{ env.WORKDIR }} apply -auto-approve -input=false -var-file=envs/dev.tfvars -no-color -parallelism=1 {{ env.ENV }}.tfplan
         # continue-on-error: true
 
       - name: Comment Apply Output
@@ -320,10 +335,15 @@ jobs:
             const outcome = "${{ steps.apply.outcome }}";
             const emoji = outcome === 'failure' ? ':x:' : ':white_check_mark:';
             const output = `#### Terraform Apply Output \`${outcome}\` ${emoji}
-            \`\`\`\n
+            <details><summary>Show Plan 🔎 </summary>
+  
+            \`\`\`diff
             ${{ steps.apply.outputs.stdout }} 
             ${{ steps.apply.outputs.stderr }}
             \`\`\`
+  
+            </details>
+            \n
             *Executed by: @${{ github.actor }}, Terraform command: \`${command}\`*`;
             github.rest.issues.createComment({
               issue_number: context.issue.number,
