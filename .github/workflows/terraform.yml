@@ -110,7 +110,7 @@ jobs:
         id: aws-role
         run: |
           AWS_ROLE="arn:aws:iam::${{ env.ACCOUNT_ID }}:role/${{ env.PROVIDER_OIDC_ROLE }}"
-          echo "AWS_ROLE=$AWS_ROLE" >> $GITHUB_ENVRole 
+          echo "AWS_ROLE=$AWS_ROLE" >> $GITHUB_ENV 
               
   validate_format:
     needs: [ cloud_provider_info ]
