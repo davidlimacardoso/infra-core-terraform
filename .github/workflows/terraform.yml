@@ -101,11 +101,11 @@ jobs:
           ACCOUNT_ID="$(jq -r '.account_id' ./${{ env.WORKDIR }}/account_config.json)"
           echo "ACCOUNT_ID=$ACCOUNT_ID" >> $GITHUB_ENV
       
-      - name: Load AWS Role ARN from **/account_config.json
+      - name: Load AWS Role ARN
         id: aws-role
         run: |
           AWS_ROLE="arn:aws:iam::${{ env.ACCOUNT_ID }}:role/${{ secrets.AWS_ROLE }}"
-          echo "AWS_ROLE=$AWS_ROLE" >> $GITHUB_ENVRole 
+          echo "AWS_ROLE=$AWS_ROLE" >> $GITHUB_ENV 
               
   validate_format:
     needs: [ cloud_provider_info ]
