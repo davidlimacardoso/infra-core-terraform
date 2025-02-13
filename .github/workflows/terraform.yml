@@ -299,10 +299,6 @@ jobs:
         with:
           name: ${{ env.ENV }}.tfplan
 
-      - name: Terraform Apply
-        id: apply
-        run: terraform -chdir=${{ env.WORKDIR }} apply -no-color ${{ env.ENV }}.tfplan
-
       - name: Authenticate in the AWS
         uses: aws-actions/configure-aws-credentials@v4
         with: 
