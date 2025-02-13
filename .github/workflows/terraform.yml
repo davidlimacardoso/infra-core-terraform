@@ -221,7 +221,7 @@ jobs:
             planOutput = modifiedLines.join('\n');
 
             const planOutcome = '${{ steps.terraform-plan.outcome }}'; 
-            const tfValidateOutcome = '${{ env.FMT }}'; 
+            const tfValidateOutcome = '${{ env.TF_VALIDATE }}'; 
             const workspaceOutcome = '${{ steps.terraform-workspace.outcome }}';
 
             const planEmoji = planOutcome == 'success' ? '✅' : '❌';
