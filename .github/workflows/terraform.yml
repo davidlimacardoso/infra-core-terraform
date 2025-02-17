@@ -352,18 +352,19 @@ jobs:
               body: output
             })
             
-      # - name: Merge Pull Request
-      #   if: steps.destroy.outcome == 'success'
-      #   uses: actions/github-script@v6
-      #   with:
-      #     github-token: ${{ secrets.GITHUB_TOKEN }}
-      #     script: |
-      #       await github.rest.pulls.merge({
-      #         owner: context.repo.owner,
-      #         repo: context.repo.repo,
-      #         pull_number: context.issue.number,
-      #         merge_method: 'merge'
-      #       });
+      - name: Merge Pull Request
+        if: steps.destroy.outcome == 'success'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              merge_method: 'merge'
+            });
+
   apply: 
     needs: [ cloud_provider_info, plan ]
     runs-on: ubuntu-latest
@@ -448,15 +449,15 @@ jobs:
               body: output
             })
 
-      # - name: Merge Pull Request
-      #   if: steps.apply.outcome == 'success'
-      #   uses: actions/github-script@v6
-      #   with:
-      #     github-token: ${{ secrets.GITHUB_TOKEN }}
-      #     script: |
-      #       await github.rest.pulls.merge({
-      #         owner: context.repo.owner,
-      #         repo: context.repo.repo,
-      #         pull_number: context.issue.number,
-      #         merge_method: 'merge'
-      #       });
+      - name: Merge Pull Request
+        if: steps.apply.outcome == 'success'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              merge_method: 'merge'
+            });
