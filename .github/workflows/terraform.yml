@@ -34,6 +34,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Hide Previous Comments
+        uses: kanga333/comment-hider@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+        
       - name: Get modified files in the repository and generate work directory and environments
         id: get-provider
         run: |
@@ -202,11 +207,6 @@ jobs:
           name: tfplan
           path: ${{ env.WORKDIR }}/planfile
  
-      - name: Hide Previous Comments
-        uses: kanga333/comment-hider@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Comment Plan Output
         uses: actions/github-script@v6
         
@@ -316,13 +316,6 @@ jobs:
         id: workspace
         run: |
           terraform -chdir=${{ env.WORKDIR }} workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
-      
-      - name: Show filesdir
-        run: |
-          ls -la ${{ env.WORKDIR }}
-          echo ""
-          ls -R
-
 
       - name: Terraform Apply
         id: apply
