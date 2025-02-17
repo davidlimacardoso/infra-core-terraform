@@ -316,6 +316,13 @@ jobs:
         id: workspace
         run: |
           terraform -chdir=${{ env.WORKDIR }} workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
+      
+      - name: Show filesdir
+        run: |
+          ls -la ${{ env.WORKDIR }}
+          echo ""
+          ls -R
+
 
       - name: Terraform Apply
         id: apply
@@ -330,7 +337,7 @@ jobs:
             const outcome = "${{ steps.apply.outcome }}";
             const emoji = outcome === 'failure' ? ':x:' : ':white_check_mark:';
             const output = `#### Terraform Apply Output \`${outcome}\` ${emoji}
-            <details><summary>Show Plan 🔎 </summary>
+            <details><summary>Show apply 🔎 </summary>
   
             \`\`\`diff
             ${{ steps.apply.outputs.stdout }} 
