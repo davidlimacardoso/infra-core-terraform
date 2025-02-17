@@ -26,6 +26,7 @@ jobs:
       region: ${{ env.REGION }}
       account_name: ${{ env.ACCOUNT_NAME }}
       aws_role: ${{ env.AWS_ROLE }}
+      destroy: ${{ env.DESTROY }}
     defaults:
       run:
         shell: bash
@@ -119,6 +120,12 @@ jobs:
             exit 1
           fi
 
+      - name: Read destroy configuration
+        id: read-destroy-config
+        run: |
+          DESTROY="$(jq -r '.${{ env.ENV }}' ./${{ env.WORKDIR }}/destroy_config.json)"
+          echo "DESTROY=$(echo $DESTROY)" >> $GITHUB_OUTPUT
+
       - name: Load account id from **/account.json
         id: account-id
         run: |
@@ -139,11 +146,14 @@ jobs:
       WORKDIR: ${{ needs.cloud_provider_info.outputs.workdir }}
       AWS_ROLE: ${{ needs.cloud_provider_info.outputs.aws_role }}
       REGION: ${{ needs.cloud_provider_info.outputs.region }}
+      DESTROY: ${{ needs.cloud_provider_info.outputs.destroy }}
     outputs:
       tf_validate: ${{ steps.terraform-validate.outcome }}
     defaults:
       run:
         shell: bash
+
+    if: ${{ env.DESTROY != 'true' }}
 
     steps:
       - name: Checkout code
@@ -179,9 +189,12 @@ jobs:
       AWS_ROLE: ${{ needs.cloud_provider_info.outputs.aws_role }}
       TF_VALIDATE: ${{ needs.validate_format.outputs.tf_validate }}
       REGION: ${{ needs.cloud_provider_info.outputs.region }}
+      DESTROY: ${{ needs.cloud_provider_info.outputs.destroy }}
     defaults:
       run:
         shell: bash
+
+    if: ${{ env.DESTROY != 'true' }}
 
     steps:
       - name: Checkout code
@@ -282,16 +295,14 @@ jobs:
       AWS_ROLE: ${{ needs.cloud_provider_info.outputs.aws_role }}
       TF_VALIDATE: ${{ needs.validate_format.outputs.tf_validate }}
       REGION: ${{ needs.cloud_provider_info.outputs.region }}
+      DESTROY: ${{ needs.cloud_provider_info.outputs.destroy }}
     defaults:
       run:
         shell: bash
+        
+    if: ${{ env.DESTROY == 'true' }}
 
     steps:
-      - name: Read destroy configuration
-        id: read-destroy-config
-        run: |
-          DESTROY="$(jq -r '.${{ env.ENV }}' .${{ env.WORKDIR }}/destroy_config.json)"
-          echo "destroy=$(echo $DESTROY)" >> $GITHUB_OUTPUT
 
       - name: Authenticate in the AWS
         uses: aws-actions/configure-aws-credentials@v4
@@ -355,9 +366,12 @@ jobs:
       AWS_ROLE: ${{ needs.cloud_provider_info.outputs.aws_role }}
       TF_VALIDATE: ${{ needs.validate_format.outputs.tf_validate }}
       REGION: ${{ needs.cloud_provider_info.outputs.region }}
+      DESTROY: ${{ needs.cloud_provider_info.outputs.destroy }}
     defaults:
       run:
         shell: bash
+
+    if: ${{ env.DESTROY != 'true' }}
 
     steps:
       - name: Notify Applying Settings
