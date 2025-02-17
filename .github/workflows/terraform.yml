@@ -297,6 +297,9 @@ jobs:
       - name: Download Planfile Arifact
         uses: actions/download-artifact@v4
 
+      - name: Show files
+        run: ls -R
+
       - name: Authenticate in the AWS
         uses: aws-actions/configure-aws-credentials@v4
         with: 
@@ -318,7 +321,7 @@ jobs:
       - name: Terraform Apply
         id: apply
         run: terraform -chdir=${{ env.WORKDIR }} apply -auto-approve -input=false -var-file=envs/dev.tfvars -no-color -parallelism=1 ./tfplan/planfile
-        # continue-on-error: true
+        continue-on-error: true
 
       - name: Comment Apply Output
         uses: actions/github-script@v6
