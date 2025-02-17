@@ -160,6 +160,8 @@ jobs:
   plan:
     needs: [ validate_format, cloud_provider_info ]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:  
       WORKDIR: ${{ needs.cloud_provider_info.outputs.workdir }}
       AWS_ROLE: ${{ needs.cloud_provider_info.outputs.aws_role }}
@@ -319,7 +321,7 @@ jobs:
 
       - name: Terraform Apply
         id: apply
-        run: terraform -chdir=${{ env.WORKDIR }} apply -auto-approve -input=false -var-file=envs/${{ env.ENV }}.tfvars -no-color -parallelism=1 planfile
+        run: terraform -chdir=${{ env.WORKDIR }} apply -auto-approve -input=false -var-file=envs/${{ env.ENV }}.tfvars -no-color -parallelism=1 .tfplan/planfile
         continue-on-error: true
 
       - name: Comment Apply Output
