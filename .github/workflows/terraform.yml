@@ -146,14 +146,13 @@ jobs:
       WORKDIR: ${{ needs.cloud_provider_info.outputs.workdir }}
       AWS_ROLE: ${{ needs.cloud_provider_info.outputs.aws_role }}
       REGION: ${{ needs.cloud_provider_info.outputs.region }}
-      DESTROY: ${{ needs.cloud_provider_info.outputs.destroy }}
     outputs:
       tf_validate: ${{ steps.terraform-validate.outcome }}
     defaults:
       run:
         shell: bash
 
-    if: ${{ env.DESTROY != 'true' }}
+    if: ${{ needs.cloud_provider_info.outputs.destroy != 'true' }}
 
     steps:
       - name: Checkout code
@@ -189,12 +188,11 @@ jobs:
       AWS_ROLE: ${{ needs.cloud_provider_info.outputs.aws_role }}
       TF_VALIDATE: ${{ needs.validate_format.outputs.tf_validate }}
       REGION: ${{ needs.cloud_provider_info.outputs.region }}
-      DESTROY: ${{ needs.cloud_provider_info.outputs.destroy }}
     defaults:
       run:
         shell: bash
 
-    if: ${{ env.DESTROY != 'true' }}
+    if: ${{ needs.cloud_provider_info.outputs.destroy != 'true' }}
 
     steps:
       - name: Checkout code
@@ -288,19 +286,18 @@ jobs:
         run: exit 1
 
   destroy:
-    needs: [ cloud_provider_info, plan ]
+    needs: [ cloud_provider_info ]
     runs-on: ubuntu-latest
     env:  
       WORKDIR: ${{ needs.cloud_provider_info.outputs.workdir }}
       AWS_ROLE: ${{ needs.cloud_provider_info.outputs.aws_role }}
       TF_VALIDATE: ${{ needs.validate_format.outputs.tf_validate }}
       REGION: ${{ needs.cloud_provider_info.outputs.region }}
-      DESTROY: ${{ needs.cloud_provider_info.outputs.destroy }}
     defaults:
       run:
         shell: bash
 
-    if: ${{ env.DESTROY == 'true' }}
+    if: ${{ needs.cloud_provider_info.outputs.destroy == 'true' }}
 
     steps:
 
@@ -366,12 +363,11 @@ jobs:
       AWS_ROLE: ${{ needs.cloud_provider_info.outputs.aws_role }}
       TF_VALIDATE: ${{ needs.validate_format.outputs.tf_validate }}
       REGION: ${{ needs.cloud_provider_info.outputs.region }}
-      DESTROY: ${{ needs.cloud_provider_info.outputs.destroy }}
     defaults:
       run:
         shell: bash
 
-    if: ${{ env.DESTROY != 'true' }}
+    if: ${{ needs.cloud_provider_info.outputs.destroy != 'true' }}
 
     steps:
       - name: Notify Applying Settings
