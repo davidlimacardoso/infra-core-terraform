@@ -355,20 +355,16 @@ jobs:
               repo: context.repo.repo,
               body: output
             })
-  #     # - name: Merge Pull Request
-  #     #   if: steps.apply.outcome == 'success'
-  #     #   uses: actions/github-script@v6
-  #     #   with:
-  #     #     github-token: ${{ secrets.GITHUB_TOKEN }}
-  #     #     script: |
-  #     #       await github.rest.pulls.merge({
-  #     #         owner: context.repo.owner,
-  #     #         repo: context.repo.repo,
-  #     #         pull_number: context.issue.number,
-  #     #         merge_method: 'merge'
-  #     #       });
-  #     - name: Hide Previous Comments
-  #       if: steps.apply.outcome != 'success'
-  #       uses: kanga333/comment-hider@master
-  #       with:
-  #         github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge Pull Request
+        if: steps.apply.outcome == 'success'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              merge_method: 'merge'
+            });
