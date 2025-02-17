@@ -78,6 +78,10 @@ jobs:
               regions+=("$region")
             fi
           done
+          
+          echo "Cloud Providers: ${cloud_providers[@]}"
+          echo "Accounts: ${accounts[@]}"
+          echo "Regions: ${regions[@]}"
 
           ####### To check if are more Cloud Providers modified #######
           if [ ${#cloud_providers[@]} -gt 1 ]; then
