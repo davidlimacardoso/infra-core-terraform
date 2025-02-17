@@ -160,8 +160,6 @@ jobs:
   plan:
     needs: [ validate_format, cloud_provider_info ]
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     env:  
       WORKDIR: ${{ needs.cloud_provider_info.outputs.workdir }}
       AWS_ROLE: ${{ needs.cloud_provider_info.outputs.aws_role }}
@@ -329,7 +327,6 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            # const command = context.payload.comment.body;
             const outcome = "${{ steps.apply.outcome }}";
             const emoji = outcome === 'failure' ? ':x:' : ':white_check_mark:';
             const output = `#### Terraform Apply Output \`${outcome}\` ${emoji}
