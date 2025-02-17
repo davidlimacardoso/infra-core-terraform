@@ -282,6 +282,8 @@ jobs:
       AWS_ROLE: ${{ needs.cloud_provider_info.outputs.aws_role }}
       TF_VALIDATE: ${{ needs.validate_format.outputs.tf_validate }}
       REGION: ${{ needs.cloud_provider_info.outputs.region }}
+    permissions:
+      contents: write
     defaults:
       run:
         shell: bash
