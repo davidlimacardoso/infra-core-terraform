@@ -294,11 +294,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Download Planfile Arifact
+      - name: Download Planfile Artifact and send to workdir
         uses: actions/download-artifact@v4
-
-      - name: Show files
-        run: ls -R
+        with:
+          path: ${{ env.WORKDIR }}
 
       - name: Authenticate in the AWS
         uses: aws-actions/configure-aws-credentials@v4
@@ -320,7 +319,7 @@ jobs:
 
       - name: Terraform Apply
         id: apply
-        run: terraform -chdir=${{ env.WORKDIR }} apply -auto-approve -input=false -var-file=envs/dev.tfvars -no-color -parallelism=1 tfplan/planfile
+        run: terraform -chdir=${{ env.WORKDIR }} apply -auto-approve -input=false -var-file=envs/${{ env.ENV }}.tfvars -no-color -parallelism=1 planfile
         continue-on-error: true
 
       - name: Comment Apply Output
@@ -328,7 +327,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const command = context.payload.comment.body;
+            # const command = context.payload.comment.body;
             const outcome = "${{ steps.apply.outcome }}";
             const emoji = outcome === 'failure' ? ':x:' : ':white_check_mark:';
             const output = `#### Terraform Apply Output \`${outcome}\` ${emoji}
@@ -341,7 +340,7 @@ jobs:
   
             </details>
             \n
-            *Executed by: @${{ github.actor }}, Terraform command: \`${command}\`*`;
+            *Executed by: @${{ github.actor }}, Terraform command: \`terraform apply\`*`;
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
