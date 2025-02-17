@@ -124,7 +124,7 @@ jobs:
         id: read-destroy-config
         run: |
           DESTROY="$(jq -r '.${{ env.ENV }}' ./${{ env.WORKDIR }}/destroy_config.json)"
-          echo "DESTROY=$(echo $DESTROY)" >> $GITHUB_OUTPUT
+          echo "DESTROY=$DESTROY" >> $GITHUB_OUTPUT
 
       - name: Load account id from **/account.json
         id: account-id
@@ -299,7 +299,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        
+
     if: ${{ env.DESTROY == 'true' }}
 
     steps:
