@@ -67,6 +67,11 @@ jobs:
             account=$(echo $file | cut -d'/' -f3)
             region=$(echo $file | cut -d'/' -f4)
 
+            # Ignore account.json file, fixing the trouble of account join the region variable 
+            if [[ "$file" == *"account.json"* ]]; then
+              continue
+            fi
+            
             ####### Add the Cloud Provider, accounts, and region to arrays #######
             if [[ ! " ${cloud_providers[@]} " =~ " ${cloud_provider} " ]]; then
               cloud_providers+=("$cloud_provider")
