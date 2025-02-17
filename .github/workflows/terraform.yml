@@ -26,7 +26,7 @@ jobs:
       region: ${{ env.REGION }}
       account_name: ${{ env.ACCOUNT_NAME }}
       aws_role: ${{ env.AWS_ROLE }}
-      destroy: env.DESTROY
+      destroy: ${{ steps.read-destroy-config.outputs.destroy }}
     defaults:
       run:
         shell: bash
@@ -124,7 +124,7 @@ jobs:
         id: read-destroy-config
         run: |
           DESTROY="$(jq -r '.${{ env.ENV }}' "./${{ env.WORKDIR }}/destroy_config.json")"
-          echo "DESTROY=$DESTROY" >> $GITHUB_ENV
+          echo "DESTROY=$DESTROY" >> $GITHUB_OUTPUT
 
       - name: Load account id from **/account.json
         id: account-id
@@ -146,14 +146,13 @@ jobs:
       WORKDIR: ${{ needs.cloud_provider_info.outputs.workdir }}
       AWS_ROLE: ${{ needs.cloud_provider_info.outputs.aws_role }}
       REGION: ${{ needs.cloud_provider_info.outputs.region }}
-      DESTROY: ${{ needs.cloud_provider_info.outputs.destroy }}
     outputs:
       tf_validate: ${{ steps.terraform-validate.outcome }}
     defaults:
       run:
         shell: bash
 
-    if: env.DESTROY != 'true'
+    if: ${{ needs.cloud_provider_info.outputs.destroy != 'true' }}
 
     steps:
       - name: Checkout code
@@ -193,7 +192,7 @@ jobs:
       run:
         shell: bash
 
-    if: env.DESTROY != 'true'
+    if: ${{ needs.cloud_provider_info.outputs.destroy != 'true' }}
 
     steps:
       - name: Checkout code
@@ -298,7 +297,7 @@ jobs:
       run:
         shell: bash
 
-    if: env.DESTROY == 'true'
+    if: ${{ needs.cloud_provider_info.outputs.destroy == 'true' }}
 
     steps:
 
@@ -368,7 +367,7 @@ jobs:
       run:
         shell: bash
 
-    if: env.DESTROY != 'true'
+    if: ${{ needs.cloud_provider_info.outputs.destroy != 'true' }}
 
     steps:
       - name: Notify Applying Settings
