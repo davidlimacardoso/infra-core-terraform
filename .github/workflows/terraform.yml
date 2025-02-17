@@ -274,6 +274,79 @@ jobs:
         if: steps.plan.outcome == 'failure'
         run: exit 1
 
+  destroy:
+    needs: [ cloud_provider_info, plan ]
+    runs-on: ubuntu-latest
+    env:  
+      WORKDIR: ${{ needs.cloud_provider_info.outputs.workdir }}
+      AWS_ROLE: ${{ needs.cloud_provider_info.outputs.aws_role }}
+      TF_VALIDATE: ${{ needs.validate_format.outputs.tf_validate }}
+      REGION: ${{ needs.cloud_provider_info.outputs.region }}
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Read destroy configuration
+        id: read-destroy-config
+        run: |
+          DESTROY="$(jq -r '.${{ env.ENV }}' .${{ env.WORKDIR }}/destroy_config.json)"
+          echo "destroy=$(echo $DESTROY)" >> $GITHUB_OUTPUT
+
+      - name: Authenticate in the AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with: 
+          role-to-assume: "${{ env.AWS_ROLE }}"
+          aws-region: "${{ env.REGION }}"
+
+      - name: Terraform Workspace
+        id: workspace
+        run: |
+          terraform -chdir=${{ env.WORKDIR }} workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
+
+      - name: Terraform Destroy
+        if: steps.read-destroy-config.outputs.destroy == 'true'
+        id: destroy
+        run: terraform -chdir=${{ env.WORKDIR }} destroy -auto-approve -input=false -var-file=envs/${{ env.ENV }}.tfvars -no-color
+        continue-on-error: true
+      
+      - name: Comment Destroy Output
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const outcome = "${{ steps.destroy.outcome }}";
+            const emoji = outcome === 'failure' ? ':x:' : ':white_check_mark:';
+            const output = `#### Terraform Destroy Output \`${outcome}\` ${emoji}
+            <details><summary>Show destroy 🔎 </summary>
+  
+            \`\`\`diff
+            ${{ steps.destroy.outputs.stdout }} 
+            ${{ steps.destroy.outputs.stderr }}
+            \`\`\`
+  
+            </details>
+            \n
+            *Executed by: @${{ github.actor }}, Terraform command: \`terraform destroy\`*`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+            
+      - name: Merge Pull Request
+        if: steps.destroy.outcome == 'success'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              merge_method: 'merge'
+            });
   apply: 
     needs: [ cloud_provider_info, plan ]
     runs-on: ubuntu-latest
