@@ -323,7 +323,6 @@ jobs:
           terraform -chdir=${{ env.WORKDIR }} workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
 
       - name: Terraform Destroy
-        if: steps.read-destroy-config.outputs.destroy == 'true'
         id: destroy
         run: terraform -chdir=${{ env.WORKDIR }} destroy -auto-approve -input=false -var-file=envs/${{ env.ENV }}.tfvars -no-color
         continue-on-error: true
