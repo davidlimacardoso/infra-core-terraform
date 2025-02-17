@@ -1,0 +1,463 @@
+name: "Terraform Workflow"
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+      provider_oidc_role:
+        type: string
+        default: github-actions-iac-role
+        description: "The name of the role to assume in the OIDC provider account"
+
+env:
+  ENV: ${{ inputs.environment }}
+  PROVIDER_OIDC_ROLE: ${{ inputs.provider_oidc_role }}
+
+jobs:
+
+  cloud_provider_info:
+    runs-on: ubuntu-latest
+    outputs:
+      provider: ${{ env.PROVIDER }}
+      workdir: ${{ env.WORKDIR }}
+      account_id: ${{ env.ACCOUNT_ID }}
+      region: ${{ env.REGION }}
+      account_name: ${{ env.ACCOUNT_NAME }}
+      aws_role: ${{ env.AWS_ROLE }}
+      destroy: ${{ steps.read-destroy-config.outputs.destroy }}
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Hide Previous Comments
+        uses: kanga333/comment-hider@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+        
+      - name: Get modified files in the repository and generate work directory and environments
+        id: get-provider
+        run: |
+          BASE_REF="${{ github.base_ref }}"
+          HEAD_REF="${{ github.head_ref }}"
+          REPOSITORY="${{ github.repository }}"
+
+          ######## GitHub API URL load diff between base and head commit #######
+          API_URL="https://api.github.com/repos/${REPOSITORY}/compare/${BASE_REF}...${HEAD_REF}"
+
+          ######## Load modified files #######
+          response=$(curl -s $API_URL)
+
+          ######## Filter files that start with 'infra/' #######
+          files=$(echo "$response" | jq -r '.files[] | select(.filename | startswith("infra/")) | .filename')
+
+          ######## Arrays to save Cloud Providers and modified accounts #######
+          cloud_providers=()
+          accounts=()
+          regions=()
+
+          ####### Analyze modified files #######
+          for file in $files; do
+            # Extract Cloud Provider, Accounts path, and Region
+            cloud_provider=$(echo $file | cut -d'/' -f2)
+            account=$(echo $file | cut -d'/' -f3)
+            region=$(echo $file | cut -d'/' -f4)
+
+            # Ignore account.json file, fixing the trouble of account join the region variable 
+            if [[ "$file" == *"account.json"* ]]; then
+              continue
+            fi
+            
+            ####### Add the Cloud Provider, accounts, and region to arrays #######
+            if [[ ! " ${cloud_providers[@]} " =~ " ${cloud_provider} " ]]; then
+              cloud_providers+=("$cloud_provider")
+            fi
+            if [[ ! " ${accounts[@]} " =~ " ${account} " ]]; then
+              accounts+=("$account")
+            fi
+            if [[ ! " ${regions[@]} " =~ " ${region} " ]]; then
+              regions+=("$region")
+            fi
+          done
+          
+          echo "Cloud Providers: ${cloud_providers[@]}"
+          echo "Accounts: ${accounts[@]}"
+          echo "Regions: ${regions[@]}"
+
+          ####### To check if are more Cloud Providers modified #######
+          if [ ${#cloud_providers[@]} -gt 1 ]; then
+            echo "Please modify only one Cloud Provider at a time."
+            exit 1
+          fi
+
+          ####### Check if there is more than one modified account within the Cloud Provider #######
+          if [ ${#accounts[@]} -gt 1 ]; then
+            echo "Please modify only one Account at a time."
+            exit 1
+          fi
+
+          ####### Check if more than one modified region within the Account #######
+          if [ ${#regions[@]} -gt 1 ]; then
+            echo "Please modify only one Region at a time."
+            exit 1
+          fi
+
+          ####### Return the modified account path #######
+          if [ ${#accounts[@]} -eq 1 ]; then
+            echo "Modified account: infra/${cloud_providers[0]}/${accounts[0]}/${regions[0]}"
+            FILE_PATH="infra/${cloud_providers[0]}/${accounts[0]}/${regions[0]}"
+            echo "WORKDIR=$FILE_PATH" >> $GITHUB_ENV
+            echo "ACCOUNT_NAME=${accounts[0]}" >> $GITHUB_ENV
+            echo "PROVIDER=${cloud_providers[0]}" >> $GITHUB_ENV
+            echo "REGION=${regions[0]}" >> $GITHUB_ENV
+          else
+            echo "No modifications detected in infra/aws, infra/gcp, infra/oci etc..."
+            exit 1
+          fi
+
+      - name: Read destroy configuration
+        id: read-destroy-config
+        run: |
+          DESTROY="$(jq -r '.${{ env.ENV }}' "./${{ env.WORKDIR }}/destroy_config.json")"
+          echo "DESTROY=$DESTROY" >> $GITHUB_OUTPUT
+
+      - name: Load account id from **/account.json
+        id: account-id
+        run: |
+          ACCOUNT_CONFIG_DIR="$(dirname "${{ env.WORKDIR }}")"
+          ACCOUNT_ID="$(jq -r '.account_id' "$ACCOUNT_CONFIG_DIR/account.json")"
+          echo "ACCOUNT_ID=$ACCOUNT_ID" >> $GITHUB_ENV
+      
+      - name: Load AWS Role ARN
+        id: aws-role
+        run: |
+          AWS_ROLE="arn:aws:iam::${{ env.ACCOUNT_ID }}:role/${{ env.PROVIDER_OIDC_ROLE }}"
+          echo "AWS_ROLE=$AWS_ROLE" >> $GITHUB_ENV 
+              
+  validate_format:
+    needs: [ cloud_provider_info ]
+    runs-on: ubuntu-latest
+    env: 
+      WORKDIR: ${{ needs.cloud_provider_info.outputs.workdir }}
+      AWS_ROLE: ${{ needs.cloud_provider_info.outputs.aws_role }}
+      REGION: ${{ needs.cloud_provider_info.outputs.region }}
+    outputs:
+      tf_validate: ${{ steps.terraform-validate.outcome }}
+    defaults:
+      run:
+        shell: bash
+
+    if: ${{ needs.cloud_provider_info.outputs.destroy != 'true' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: AWS Authentication
+        id: aws-auth
+        uses: aws-actions/configure-aws-credentials@v4
+        with: 
+          role-to-assume: ${{ env.AWS_ROLE }}
+          aws-region: "${{ env.REGION }}"
+          
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        id: terraform-init
+        run: terraform -chdir=${{ env.WORKDIR }} init
+
+      - name: Terraform Fmt
+        id: terraform-format
+        run: terraform -chdir=${{ env.WORKDIR }} fmt -check
+   
+      - name: Terraform Validate
+        id: terraform-validate
+        run: terraform -chdir=${{ env.WORKDIR }} validate -no-color
+
+  plan:
+    needs: [ validate_format, cloud_provider_info ]
+    runs-on: ubuntu-latest
+    env:  
+      WORKDIR: ${{ needs.cloud_provider_info.outputs.workdir }}
+      AWS_ROLE: ${{ needs.cloud_provider_info.outputs.aws_role }}
+      TF_VALIDATE: ${{ needs.validate_format.outputs.tf_validate }}
+      REGION: ${{ needs.cloud_provider_info.outputs.region }}
+    defaults:
+      run:
+        shell: bash
+
+    if: ${{ needs.cloud_provider_info.outputs.destroy != 'true' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate in the AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with: 
+          role-to-assume: "${{ env.AWS_ROLE }}"
+          aws-region: "${{ env.REGION }}"
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform init
+        id: terraform-init
+        run: terraform -chdir=${{ env.WORKDIR }} init
+
+      - name: Terraform Workspace
+        id: terraform-workspace
+        run: terraform -chdir=${{ env.WORKDIR }} workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
+
+      - name: Terraform Plan
+        id: terraform-plan
+        run: |
+          terraform -chdir=${{ env.WORKDIR }} plan -detailed-exitcode -no-color -input=false -var-file=envs/${{ env.ENV }}.tfvars -out planfile > ${{ env.ENV }}_plan_output.txt
+        continue-on-error: true
+
+      - name: Upload Planfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: ${{ env.WORKDIR }}/planfile
+ 
+      - name: Comment Plan Output
+        uses: actions/github-script@v6
+        
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            let planOutput = fs.readFileSync('${{ env.ENV }}_plan_output.txt', 'utf8');
+
+            const lines = planOutput.split('\n');
+            const modifiedLines = lines.map(line => {
+                // Analize if line start with this signals: '+', '-' ou '~'
+                const trimmedLine = line.trim();
+                if (trimmedLine.startsWith('+') || trimmedLine.startsWith('-') || trimmedLine.startsWith('~')) {
+                    // Capture the sihnal
+                    const sign = trimmedLine[0];
+                    // Remove the sign and the first space, then add the corresponding sign at the beginning
+                    let newLine = line.replace(/^[+\-~]\s*/, ' ').replace(/^ /, sign === '~' ? '! ' : sign + ' ');
+                    return newLine;
+                }
+                return line;
+            });
+
+            // Merge modified lines into a single string
+            planOutput = modifiedLines.join('\n');
+
+            const planOutcome = '${{ steps.terraform-plan.outcome }}'; 
+            const tfValidateOutcome = '${{ env.TF_VALIDATE }}'; 
+            const workspaceOutcome = '${{ steps.terraform-workspace.outcome }}';
+
+            const planEmoji = planOutcome == 'success' ? '✅' : '❌';
+            const tfValEmoji = tfValidateOutcome == 'success' ? '✅' : '❌';
+            const workspaceEmoji = workspaceOutcome == 'success' ? '✅' : '❌';
+
+            const output = `#### Terraform Format and Style 🖌\`${{ env.TF_VALIDATE }} ${tfValEmoji}\`
+            #### Terraform Workspace \`${{ env.ENV }}\` 🤖 \`${{ steps.terraform-workspace.outcome }} ${workspaceEmoji}\`
+            #### Terraform Plan 📖 \`${{ steps.terraform-plan.outcome }} ${planEmoji}\`
+            <details><summary>Show Plan 🔎 </summary>
+  
+            \`\`\`diff
+            ${planOutput}
+            \`\`\`
+  
+            </details>
+            \n
+  
+            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+      
+      - name: Terraform plan status
+        if: steps.plan.outcome == 'failure'
+        run: exit 1
+
+  destroy:
+    needs: [ cloud_provider_info ]
+    runs-on: ubuntu-latest
+    env:  
+      WORKDIR: ${{ needs.cloud_provider_info.outputs.workdir }}
+      AWS_ROLE: ${{ needs.cloud_provider_info.outputs.aws_role }}
+      TF_VALIDATE: ${{ needs.validate_format.outputs.tf_validate }}
+      REGION: ${{ needs.cloud_provider_info.outputs.region }}
+    defaults:
+      run:
+        shell: bash
+
+    if: ${{ needs.cloud_provider_info.outputs.destroy == 'true' }}
+
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Authenticate in the AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with: 
+          role-to-assume: "${{ env.AWS_ROLE }}"
+          aws-region: "${{ env.REGION }}"
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform init
+        id: terraform-init
+        run: terraform -chdir=${{ env.WORKDIR }} init
+
+      - name: Terraform Workspace
+        id: workspace
+        run: |
+          terraform -chdir=${{ env.WORKDIR }} workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
+
+      - name: Terraform Destroy
+        id: destroy
+        run: terraform -chdir=${{ env.WORKDIR }} destroy -auto-approve -input=false -var-file=envs/${{ env.ENV }}.tfvars -no-color
+        continue-on-error: true
+      
+      - name: Comment Destroy Output
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const outcome = "${{ steps.destroy.outcome }}";
+            const emoji = outcome === 'failure' ? ':x:' : ':white_check_mark:';
+            const output = `#### Terraform Destroy Output \`${outcome}\` ${emoji}
+            <details><summary>Show destroy 🔎 </summary>
+  
+            \`\`\`diff
+            ${{ steps.destroy.outputs.stdout }} 
+            ${{ steps.destroy.outputs.stderr }}
+            \`\`\`
+  
+            </details>
+            \n
+            *Executed by: @${{ github.actor }}, Terraform command: \`terraform destroy\`*`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+            
+      - name: Merge Pull Request
+        if: steps.destroy.outcome == 'success'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              merge_method: 'merge'
+            });
+
+  apply: 
+    needs: [ cloud_provider_info, plan ]
+    runs-on: ubuntu-latest
+    env:  
+      WORKDIR: ${{ needs.cloud_provider_info.outputs.workdir }}
+      AWS_ROLE: ${{ needs.cloud_provider_info.outputs.aws_role }}
+      TF_VALIDATE: ${{ needs.validate_format.outputs.tf_validate }}
+      REGION: ${{ needs.cloud_provider_info.outputs.region }}
+    defaults:
+      run:
+        shell: bash
+
+    if: ${{ needs.cloud_provider_info.outputs.destroy != 'true' }}
+
+    steps:
+      - name: Notify Applying Settings
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = "\>\:rocket\: Applying the settings...";
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+              
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Download Planfile Artifact and send to workdir
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ env.WORKDIR }}
+
+      - name: Authenticate in the AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with: 
+          role-to-assume: "${{ env.AWS_ROLE }}"
+          aws-region: "${{ env.REGION }}"
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        id: init
+        run: terraform -chdir=${{ env.WORKDIR }} init
+        
+      - name: Terraform Workspace
+        id: workspace
+        run: |
+          terraform -chdir=${{ env.WORKDIR }} workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
+
+      - name: Terraform Apply
+        id: apply
+        run: terraform -chdir=${{ env.WORKDIR }} apply -auto-approve -input=false -var-file=envs/${{ env.ENV }}.tfvars -no-color -parallelism=1 ./tfplan/planfile
+        continue-on-error: true
+
+      - name: Comment Apply Output
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const outcome = "${{ steps.apply.outcome }}";
+            const emoji = outcome === 'failure' ? ':x:' : ':white_check_mark:';
+            const output = `#### Terraform Apply Output \`${outcome}\` ${emoji}
+            <details><summary>Show apply 🔎 </summary>
+  
+            \`\`\`diff
+            ${{ steps.apply.outputs.stdout }} 
+            ${{ steps.apply.outputs.stderr }}
+            \`\`\`
+  
+            </details>
+            \n
+            *Executed by: @${{ github.actor }}, Terraform command: \`terraform apply\`*`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+
+      - name: Merge Pull Request
+        if: steps.apply.outcome == 'success'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              merge_method: 'merge'
+            });
