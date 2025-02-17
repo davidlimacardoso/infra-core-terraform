@@ -317,7 +317,7 @@ jobs:
 
       - name: Terraform Apply
         id: apply
-        run: terraform -chdir=${{ env.WORKDIR }} apply -auto-approve -input=false -var-file=envs/dev.tfvars -no-color -parallelism=1 ./tflan/planfile
+        run: terraform -chdir=${{ env.WORKDIR }} apply -auto-approve -input=false -var-file=envs/dev.tfvars -no-color -parallelism=1 ./tfplan/planfile
         # continue-on-error: true
 
       - name: Comment Apply Output
