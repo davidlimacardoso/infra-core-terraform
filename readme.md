@@ -6,6 +6,8 @@ This repository contains Terraform configurations for managing core infrastructu
 
 This project uses Terraform to manage AWS infrastructure with a workflow automation using GitHub Actions. It supports multiple environments and includes state management using S3 backend with DynamoDB locking.
 
+![](img/drawio/iac.jpg)
+
 ## Prerequisites
 
 - Terraform v1.8.3
@@ -13,38 +15,133 @@ This project uses Terraform to manage AWS infrastructure with a workflow automat
 - GitHub Actions enabled
 - Access to AWS with appropriate permissions
 
-### Create OIDC Role
+## Initial Setup
+Maybe you will need replicate this steps at all AWS accounts with you want to use...
 
-- Create a bucket terraform state
-
-ex: infra-core-terraform-xyz
-
-- Create a DynamoDB Table to lock id 
-
-ex: infra_core_terraform_lock  
-
-- Create the first resources roles do OIDC
+1. Create a bucket terraform state (ensure the unique bucket name):
 
 ```bash
-
-    terraform apply \
-        -var-file=envs/dev.tfvars \
-        -target="aws_iam_openid_connect_provider.github_actions_oidc" \
-        -target="aws_iam_role.github_actions_iac_role" \
-        -target="aws_iam_role_policy.github_actions_iac_policy"
+aws s3api create-bucket --bucket infra-core-terraform-xyz --region us-east-1 --create-bucket-configuration LocationConstraint=us-east-1
 ```
+
+2. Create a DynamoDB table to lock id, to get more security with parallel executions (don't required):
+
+```bash
+aws dynamodb create-table \
+    --table-name infra_core_terraform_lock \
+    --attribute-definitions \
+        AttributeName=lockID,AttributeType=S \
+    --key-schema \
+        AttributeName=lockID,KeyType=HASH \
+    --provisioned-throughput \
+        ReadCapacityUnits=5,WriteCapacityUnits=5
+```
+
+3. Set the values inside backend.tf:
+
+```hcl
+  backend "s3" {
+    bucket = "infra-core-terraform-xyz"
+    key    = "state/us-west-2/terraform.tfstate"
+    region = "us-east-1"
+    dynamodb_table = "infra_core_terraform_lock"
+  }
+```
+
+### Create the first resources roles to OIDC
+
+1. Create a OIDC provider:
+```bash
+aws iam create-open-id-connect-provider \
+  --url "https://token.actions.githubusercontent.com" \
+  --client-id-list "sts.amazonaws.com" \
+```
+
+2. Create Role to GitHub Actions repository IaC
+```bash
+aws iam create-role \
+  --role-name "github-actions-iac-role" \
+  --assume-role-policy-document '{
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Principal": {
+          "Federated": "arn:aws:iam::<YOUR-AWS-ACCOUNT-ID>:oidc-provider/token.actions.githubusercontent.com"
+        },
+        "Action": "sts:AssumeRoleWithWebIdentity",
+        "Condition": {
+          "StringEquals": {
+            "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+            "token.actions.githubusercontent.com:sub": [
+              "repo:davidlimacardoso/infra-core-terraform:ref:refs/heads/main",
+              "repo:davidlimacardoso/infra-core-terraform:ref:refs/heads/stage",
+              "repo:davidlimacardoso/infra-core-terraform:ref:refs/heads/developer",
+              "repo:davidlimacardoso/infra-core-terraform:pull_request"
+            ]
+          }
+        }
+      }
+    ]
+  }'
+```
+
+3. Create the policy to GitHub Actions role IaC
+```bash
+aws iam create-policy \
+  --policy-name "github-actions-iac-policy" \
+  --policy-document '{
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": "*",
+        "Resource": "*"
+      }
+    ]
+  }'
+```
+
+4. Attach the policy to the Role
+```bash
+aws iam attach-role-policy \
+  --role-name "github-actions-iac-role" \
+  --policy-arn "arn:aws:iam::<YOUR-AWS-ACCOUNT-ID>:policy/github-actions-iac-policy"
+```
+
+
+
 
 ## Project Structure
 ```
-.
-├── .github
-│ └── workflows
-│ └── terraform.yml
 ├── infra
-│ ├── destroy_config.json
-│ └── envs
-│ └── {environment}
-│ └── terraform.tfvars
+│   └── aws
+│       ├── artemis                     -> { account name 1 } 
+│       │   ├── account.json            -> { account number id } 
+│       │   ├── sa-east-1               -> { region provider } 
+│       │   │   ├── backend.tf
+│       │   │   ├── destroy_config.json
+│       │   │   ├── envs
+│       │   │   │   ├── dev.tfvars
+│       │   │   │   ├── prod.tfvars
+│       │   │   ├── { you tf files }
+│       │   └── us-east-1               -> { region provider } 
+│       │       ├── backend.tf
+│       │       ├── destroy_config.json
+│       │       ├── eks.tf
+│       │       ├── envs
+│       │       │   ├── dev.tfvars
+│       │       │   ├── prod.tfvars
+│       └── zeus                        -> { account name 2 } 
+│           ├── account.json            -> { account number id } 
+│           └── us-west-2               -> { region provider } 
+│               ├── backend.tf
+│               ├── destroy_config.json
+│               ├── envs
+│               │   ├── dev.tfvars
+│               │   ├── prod.tfvars
+│               ├── outputs.tf
+...
 ```
 
 ## Configuration
@@ -69,7 +166,7 @@ The following inputs are required for the workflow:
 
 ## Usage
 
-1. Configure environment-specific variables in `./infra/envs/{environment}/terraform.tfvars`
+1. Configure environment-specific variables in `./infra/aws/account_name/region/envs/{environment}/terraform.tfvars`
 2. Update destroy configuration in `destroy_config.json` if needed
 3. Push changes to trigger the workflow
 
@@ -89,6 +186,17 @@ The following inputs are required for the workflow:
 - Uses OIDC federation for AWS authentication
 - Implements workspace isolation for different environments
 - Utilizes remote state locking
+
+## Outputs of Terraform Workflow
+
+- Example of plan:
+![](/img/cd_plan.png)
+
+- Example of apply:
+![](/img/cd_apply.png)
+
+- Example of destroy:
+![](/img/cd_destroy.png)
 
 ## Contributing
 
