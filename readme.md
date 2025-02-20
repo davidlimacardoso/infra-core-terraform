@@ -198,6 +198,13 @@ The following inputs are required for the workflow:
 - Example of destroy:
 ![](/img/cd_destroy.png)
 
+## Notification to Slack
+Use the [Amazon Q Developer in chat applications
+](https://docs.aws.amazon.com/chatbot/latest/adminguide/slack-setup.html#slack-client-setup) to send notifications to slack throught AWS SNS, [exemple of terraform configuration here](infra/aws/artemis/us-east-1/chatbot.tf), you can see the example of send text to SNS  in the `.github/workflows/terraform.yml` step `Send SNS Notification Amazon Q Developer in Chat Applications` .
+
+Result:
+![](img/notification_to_slack.png)
+
 ## Contributing
 
 1. Create a new branch
