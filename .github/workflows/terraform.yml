@@ -163,7 +163,7 @@ jobs:
             
             // Set the enviroment through branch
             let environment;
-            switch ('${{ github.head_ref }}') {
+            switch ('${{ github.base_ref }}') {
               case 'develop':
                 environment = 'DEVELOPER';
                 break;
@@ -178,7 +178,7 @@ jobs:
             }
 
             const title = "Terraform Deploy in ${provider} from GitHub Action";
-            const messageText = `Deploy IaC Terraform to ${provider} \nAccount: ${accountid}\nRegion: ${region}\nEnviroment: ${environment}\nExecuted by: @${{ github.actor }}\nPR: ${context.payload.pull_request.html_url}`;
+            const messageText = `"Deploying changes from GitHub Action per Terraform to ${provider}... \nAccount: ${accountid}\nRegion: ${region}\nEnviroment: ${environment}\nExecuted by: @${{ github.actor }}\nPR: ${context.payload.pull_request.html_url}`;
 
             const params = {
               TopicArn: 'arn:aws:sns:${{ env.REGION }}:${{ env.ACCOUNT_ID }}:${{ env.AWS_SNS_CHANNEL }}',
