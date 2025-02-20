@@ -141,6 +141,9 @@ jobs:
           AWS_ROLE="arn:aws:iam::${{ env.ACCOUNT_ID }}:role/${{ env.PROVIDER_OIDC_ROLE }}"
           echo "AWS_ROLE=$AWS_ROLE" >> $GITHUB_ENV 
 
+      - name: Install dependencies
+        run: npm install aws-sdk
+
       - name: Send SNS Notification Amazon Q Developer in Chat Applications
         uses: actions/github-script@v6
         with:
