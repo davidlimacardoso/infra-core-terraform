@@ -19,6 +19,8 @@ jobs:
 
   cloud_provider_info:
     runs-on: ubuntu-latest
+    env:
+      AWS_SNS_CHANNEL: aws-devops-slack-channel
     outputs:
       provider: ${{ env.PROVIDER }}
       workdir: ${{ env.WORKDIR }}
@@ -138,7 +140,38 @@ jobs:
         run: |
           AWS_ROLE="arn:aws:iam::${{ env.ACCOUNT_ID }}:role/${{ env.PROVIDER_OIDC_ROLE }}"
           echo "AWS_ROLE=$AWS_ROLE" >> $GITHUB_ENV 
-              
+
+      - name: Send SNS Notification Amazon Q Developer in Chat Applications
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const AWS = require('aws-sdk');
+            const sns = new AWS.SNS({ region: '${{ env.REGION }}' });
+
+            const title = "Terraform Deploy in ${{ env.PROVIDER }} from GitHub Action";
+            const messageText = `Deploy IaC Terraform to ${{ env.PROVIDER }} \nAccount: ${{ env.ACCOUNT_ID }}\nExecuted by: @${{ github.actor }}\nPR: ${context.payload.pull_request.html_url}`;
+
+            const params = {
+              TopicArn: 'arn:aws:sns:${{ env.REGION }}:${{ env.ACCOUNT_ID }}:${{ env.AWS_SNS_CHANNEL }}',
+              Message: JSON.stringify({
+                version: "1.0",
+                source: "custom",
+                content: {
+                  title: title,
+                  description: messageText
+                }
+              }),
+            };
+
+            sns.publish(params, function(err, data) {
+              if (err) {
+                console.error("Error sending SNS notification:", err);
+              } else {
+                console.log("SNS notification sent:", data);
+              }
+            });
+
   validate_format:
     needs: [ cloud_provider_info ]
     runs-on: ubuntu-latest
@@ -188,6 +221,7 @@ jobs:
       AWS_ROLE: ${{ needs.cloud_provider_info.outputs.aws_role }}
       TF_VALIDATE: ${{ needs.validate_format.outputs.tf_validate }}
       REGION: ${{ needs.cloud_provider_info.outputs.region }}
+      ACCOUNT_ID: ${{ needs.cloud_provider_info.outputs.account_id }}
     defaults:
       run:
         shell: bash
