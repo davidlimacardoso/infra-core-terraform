@@ -157,9 +157,28 @@ jobs:
           script: |
             const AWS = require('aws-sdk');
             const sns = new AWS.SNS({ region: '${{ env.REGION }}' });
+            const provider = '${{ env.PROVIDER }}'.toUpperCase();
+            const accountid = '${{ env.ACCOUNT_ID }}'.toUpperCase();
+            const region = '${{ env.REGION }}'.toUpperCase();
+            
+            // Set the enviroment through branch
+            let environment;
+            switch ('${{ github.head_ref }}') {
+              case 'develop':
+                environment = 'DEVELOPER';
+                break;
+              case 'main':
+                environment = 'PRODUCTION';
+                break;
+              case 'stage':
+                environment = 'STAGE';
+                break;
+              default:
+                environment = 'UNKNOWN'; // Default value if don't match with branchs 
+            }
 
-            const title = "Terraform Deploy in ${{ env.PROVIDER }} from GitHub Action";
-            const messageText = `Deploy IaC Terraform to ${{ env.PROVIDER }} \nAccount: ${{ env.ACCOUNT_ID }}\nExecuted by: @${{ github.actor }}\nPR: ${context.payload.pull_request.html_url}`;
+            const title = "Terraform Deploy in ${provider} from GitHub Action";
+            const messageText = `Deploy IaC Terraform to ${provider} \nAccount: ${accountid}\nRegion: ${region}\nEnviroment: ${environment}\nExecuted by: @${{ github.actor }}\nPR: ${context.payload.pull_request.html_url}`;
 
             const params = {
               TopicArn: 'arn:aws:sns:${{ env.REGION }}:${{ env.ACCOUNT_ID }}:${{ env.AWS_SNS_CHANNEL }}',
