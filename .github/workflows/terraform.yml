@@ -343,9 +343,12 @@ jobs:
               body: output
             })
       
-      - name: Terraform plan status
-        if: steps.plan.outcome == 'failure'
-        run: exit 1
+      - name: Check Plan Outcome
+        run: |
+          if [[ "${{ steps.terraform-plan.outcome }}" == "failure" ]]; then
+            echo "Terraform Plan failed, stopping the workflow."
+            exit 1
+          fi
 
   destroy:
     needs: [ cloud_provider_info ]
@@ -510,6 +513,13 @@ jobs:
               repo: context.repo.repo,
               body: output
             })
+
+      - name: Check Plan Outcome
+        run: |
+          if [[ "${{ steps.apply.outcome }}" == "failure" ]]; then
+            echo "Terraform Plan failed, stopping the workflow."
+            exit 1
+          fi
 
       - name: Merge Pull Request
         if: steps.apply.outcome == 'success'
