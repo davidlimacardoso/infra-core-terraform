@@ -23,10 +23,10 @@ terraform {
   }
 
   backend "s3" {
-    bucket         = "infra-core-terrform-0836"
-    key            = "terraform.tfstate"
-    region         = "us-east-1"
-    dynamodb_table = "infra_core_terraform_lock"
+    bucket = "infra-core-terrform-0836"
+    key    = "terraform.tfstate"
+    region = "us-east-1"
+    # dynamodb_table = "infra_core_terraform_lock"
   }
 
 }
