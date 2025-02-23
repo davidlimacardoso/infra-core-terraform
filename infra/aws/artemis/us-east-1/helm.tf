@@ -1,5 +1,4 @@
 # https://medium.com/@rvisingh1221/install-nginx-ingress-controller-in-aws-eks-890dc9c4ff72
-
 # Load values from the chart into the https://github.com/davidlimacardoso/k8s-infra-core/blob/master/helm/infra/aws/default-ingress-nginx-aws-acm.yml
 data "http" "ingress_yml" {
   url = "https://raw.githubusercontent.com/davidlimacardoso/k8s-infra-core/refs/heads/master/helm/infra/aws/default-ingress-nginx-aws-acm.yml"
