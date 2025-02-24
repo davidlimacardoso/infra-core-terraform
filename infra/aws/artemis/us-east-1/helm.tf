@@ -10,7 +10,7 @@ resource "helm_release" "ingress_nginx_jupter" {
   chart            = "ingress-nginx"
   namespace        = "ingress-nginx"
   create_namespace = true
-  version          = "19.0.0"
+  version          = "4.12.0"
   values           = [data.http.ingress_yml.response_body]
 
   set {
